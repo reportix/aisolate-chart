@@ -1,0 +1,4 @@
+*.tgz
+!chart/charts/*.tgz
+build/
+.idea/

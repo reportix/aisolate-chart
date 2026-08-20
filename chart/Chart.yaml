@@ -1,0 +1,19 @@
+apiVersion: v2
+name: aisolate
+description: >-
+  AIsolate: governed model endpoints over the organisation's own databases.
+type: application
+home: https://gitlab.reportix.com/aisolate/charts
+sources:
+  - https://gitlab.reportix.com/aisolate/charts
+  - https://gitlab.reportix.com/aisolate/control-plane
+annotations:
+  artifacthub.io/license: AGPL-3.0-only
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.29.0-0"
+keywords: [aisolate, airlock, llm, governance]
+dependencies:
+  - name: common
+    repository: oci://registry-1.docker.io/bitnamicharts
+    version: 2.41.0
