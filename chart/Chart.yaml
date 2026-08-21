@@ -1,7 +1,8 @@
 apiVersion: v2
 name: aisolate
 description: >-
-  AIsolate: governed model endpoints over the organisation's own databases.
+  AIsolate: governed model endpoints over the organisation's own databases. Installs the custom
+  resource definitions (Space, Airlock).
 type: application
 home: https://gitlab.reportix.com/aisolate/charts
 sources:
