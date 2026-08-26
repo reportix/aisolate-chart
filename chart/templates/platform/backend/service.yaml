@@ -1,0 +1,17 @@
+{{- if not .Values.headless }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: ingest
+      port: 8085
+      targetPort: 8085
+{{- end }}

@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aisolate
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- include "aisolate.ingressAnnotations" (dict "context" $) | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.platform.ingress.className }}
+  {{- include "aisolate.ingressTls" (dict "name" "aisolate" "host" .Values.platform.ingress.host "context" $) | nindent 2 }}
+  rules:
+    - host: {{ .Values.platform.ingress.host }}
+      http:
+        paths:
+          # Discovery: every space's airlocks the token may ask
+          - path: /v1/airlocks
+            pathType: Exact
+            backend:
+              service:
+                name: aisolate
+                port:
+                  number: 8080
+          # A chat path no airlock's rule matches (404 from the discovery pods); an airlock's chat path,
+          # /v1/spaces/<space>/airlocks/<airlock>/, is longer and goes to that airlock's pod
+          - path: /v1/spaces/
+            pathType: Prefix
+            backend:
+              service:
+                name: aisolate
+                port:
+                  number: 8080
+          # With the AIsolate UI the backend serves it, the same document, there before any airlock pod
+          - path: /.well-known/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ if .Values.headless }}aisolate{{ else }}backend{{ end }}
+                port:
+                  number: 8080

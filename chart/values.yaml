@@ -1,0 +1,191 @@
+## @section Global parameters
+## @open global
+## @param global.imageRegistry Registry of every image, the controller-rendered airlock and tool server pods included; wins over each image's registry
+## @param global.imagePullSecrets Pull Secret names for the chart's own pods (the controller-rendered pods run as the namespace's default ServiceAccount: give it the Secret)
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+## @param common [noReadme]
+common: {}
+
+## @section Common parameters
+
+## @param headless Install without the AIsolate UI: the CRDs, the controller, the aisolate Service and its routes. false adds the AIsolate UI's backend and the backend's database. A bool, never a string
+headless: true
+
+## @param allowTags Let tag-only images render, for clusters that build their own images; off, every AIsolate image needs its digest
+allowTags: false
+
+## @param extraDeploy Extra objects to deploy with the release (rendered as templates)
+extraDeploy: []
+
+## @section Platform
+platform:
+  controller:
+    image:
+      ## @param platform.controller.image.registry Controller image registry
+      registry: ""
+      ## @param platform.controller.image.repository Controller image repository
+      repository: aisolate/controller
+      ## @param platform.controller.image.tag Controller image tag, used only with allowTags; empty: the chart's appVersion
+      tag: ""
+      ## @param platform.controller.image.digest Controller image digest (sha256:…); required unless allowTags
+      digest: ""
+      ## @param platform.controller.image.pullPolicy Controller image pull policy
+      pullPolicy: IfNotPresent
+      ## @param platform.controller.image.pullSecrets Controller image pull Secret names
+      pullSecrets: []
+    ## @param platform.controller.replicas Controller replicas (leader-elected)
+    replicas: 1
+    ## @param platform.controller.resources [object] Controller container resources (requests, limits), e.g. for a namespace ResourceQuota
+    resources: {}
+
+  airlock:
+    image:
+      ## @param platform.airlock.image.registry Airlock image registry
+      registry: ""
+      ## @param platform.airlock.image.repository Airlock image repository: the core of every airlock pod the controller renders
+      repository: aisolate/airlock
+      ## @param platform.airlock.image.tag Airlock image tag, used only with allowTags; empty: the chart's appVersion
+      tag: ""
+      ## @param platform.airlock.image.digest Airlock image digest (sha256:…); required unless allowTags
+      digest: ""
+      ## @param platform.airlock.image.pullPolicy Pull policy of every pod the controller renders, airlock and tool server alike
+      pullPolicy: IfNotPresent
+    ## @param platform.airlock.replicas Replicas of every airlock pod, and of the discovery pods (the airlock image with no documents) behind the aisolate Service
+    replicas: 1
+    ## @param platform.airlock.runtimeClassName RuntimeClass of every airlock pod; empty: the cluster's default
+    runtimeClassName: ""
+    ## @param platform.airlock.corsAllowedOrigins Browser origins the airlock pods answer, e.g. the chat's
+    corsAllowedOrigins: ""
+    ## @param platform.airlock.resources [object] Requests and limits of every airlock pod and discovery pod (cpu, memory, ephemeral-storage, which holds the airlock's fetched code in /tmp, at most 2Gi): one airlock's code or load must not starve its node
+    resources:
+      requests: {cpu: 250m, memory: 768Mi, ephemeral-storage: 256Mi}
+      limits: {cpu: "2", memory: 1536Mi, ephemeral-storage: 4Gi}
+
+  toolServer:
+    image:
+      ## @param platform.toolServer.image.registry Tool server image registry
+      registry: ""
+      ## @param platform.toolServer.image.repository Tool server image repository: one pod per airlock, rendered by the controller
+      repository: aisolate/tool-server
+      ## @param platform.toolServer.image.tag Tool server image tag, used only with allowTags; empty: the chart's appVersion
+      tag: ""
+      ## @param platform.toolServer.image.digest Tool server image digest (sha256:…); required unless allowTags
+      digest: ""
+    ## @param platform.toolServer.resources [object] Requests and limits of every MCP server (cpu, memory, ephemeral-storage, which holds the fetched code in /tmp, at most 2Gi)
+    resources:
+      requests: {cpu: 100m, memory: 512Mi, ephemeral-storage: 128Mi}
+      limits: {cpu: "1", memory: 1Gi, ephemeral-storage: 4Gi}
+
+  ingress:
+    ## @param platform.ingress.className IngressClass of every Ingress, the chart's and the controller's
+    className: nginx
+    ## @param platform.ingress.host The release's public host: discovery and every airlock's endpoint
+    host: aisolate.example.com
+    ## @param platform.ingress.publicUrl The release's public URL; its scheme serves the AIsolate UI's hosts too
+    publicUrl: https://aisolate.example.com
+    ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also backend-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too
+    tls: false
+    ## @param platform.ingress.annotations [object] Annotations of every chart Ingress, over the chart's nginx ones, e.g. cert-manager.io/cluster-issuer
+    annotations: {}
+
+  identity:
+    ## @param platform.identity.issuerUri The identity provider: the issuer the pods and the backend validate tokens against
+    issuerUri: https://idp.example.com/realms/customer
+    ## @param platform.identity.jwkSetUri Where the pods and the backend fetch the provider's keys
+    jwkSetUri: ""
+    ## @param platform.identity.rolesClaim Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups)
+    rolesClaim: realm_access.roles
+    # The company's people, read-only, for the AIsolate UI's Add users (headless=false): the backend searches them and
+    # refuses to add an e-mail nobody signs in with. AIsolate never creates, invites or deletes anyone; admission still
+    # reads the spaces' and airlocks' e-mail lists alone. Keycloak's admin API.
+    directory:
+      ## @param platform.identity.directory.url Keycloak's base URL (no /realms), e.g. https://idp.example.com; empty: no directory, users are typed e-mails
+      url: ""
+      ## @param platform.identity.directory.realm The realm whose users the AIsolate UI picks from
+      realm: ""
+      ## @param platform.identity.directory.clientId A confidential client whose service account holds realm-management's view-users and query-users only
+      clientId: ""
+      ## @param platform.identity.directory.existingSecret The Secret with that client's secret under the key client-secret, in the release's namespace
+      existingSecret: ""
+
+  observability:
+    ## @param platform.observability.otlpEndpoint OTLP/HTTP base URL the airlock and tool server pods send their traces to, e.g. an OpenTelemetry Collector, http://otel-collector.monitoring.svc:4318 (the pods append /v1/traces); empty: no trace leaves the pods
+    otlpEndpoint: ""
+
+  # The AIsolate UI's Monitoring (headless=false): the backend reads each trace from the trace store's query API in
+  # the cluster for its trace page; the browser never calls the store.
+  tracing:
+    ## @param platform.tracing.queryUrl The trace store's query API the backend reads, Jaeger's (http://jaeger.monitoring.svc:16686) or any store that answers GET /api/traces/{id} as Jaeger does; empty: the AIsolate UI has no Monitoring
+    queryUrl: ""
+
+  # Monitoring's Metrics tab (headless=false): the backend asks the Prometheus that scrapes the pods a fixed set of
+  # queries, scoped to the caller's spaces by the series' space label; the browser never calls it.
+  metrics:
+    ## @param platform.metrics.queryUrl The Prometheus HTTP API the backend reads, e.g. http://prometheus.monitoring.svc:9090, or any store that answers /api/v1/query and /api/v1/query_range alike; its series need the space label; empty: no Metrics tab
+    queryUrl: ""
+
+  # The audit trail is the platform's: each airlock pod hands its lines to the backend (headless=false), which keeps
+  # them append-only and hash-chained per airlock. Headless has no backend: the pods print the lines to stdout alone.
+  audit:
+    ## @param platform.audit.failClosed While an airlock pod's on-disk buffer of lines the backend has not taken is full, it refuses new questions with 503 "audit unavailable"; false: it answers and the line is lost from the backend's trail (stdout keeps it)
+    failClosed: true
+    ## @param platform.audit.stdout Each audit line is also printed to the airlock pod's stdout, for a SIEM's log collector; headless keeps it on regardless
+    stdout: true
+    ## @param platform.audit.retentionMonths Months of audit lines the backend keeps (84: seven years); its daily job drops each older month whole
+    retentionMonths: 84
+    ## @param platform.audit.existingSecret An existing Secret holding the audit ingest key under the key key; set: the chart creates no audit-ingest Secret and hashes none into the pod checksums, recommended for a render without cluster access (Argo CD, helm template), where lookup cannot keep the generated key; empty: the chart generates and keeps one
+    existingSecret: ""
+
+  frontend:
+    ## @param platform.frontend.host AIsolate UI host (headless=false)
+    host: ui.aisolate.example.com
+
+  backend:
+    ## @param platform.backend.host Backend host (headless=false): the AIsolate UI's API and the CLI's endpoint
+    host: api.aisolate.example.com
+    image:
+      ## @param platform.backend.image.registry Backend image registry
+      registry: ""
+      ## @param platform.backend.image.repository Backend image repository
+      repository: aisolate/backend
+      ## @param platform.backend.image.tag Backend image tag, used only with allowTags; empty: the chart's appVersion
+      tag: ""
+      ## @param platform.backend.image.digest Backend image digest (sha256:…); required unless allowTags
+      digest: ""
+      ## @param platform.backend.image.pullPolicy Backend image pull policy
+      pullPolicy: IfNotPresent
+      ## @param platform.backend.image.pullSecrets Backend image pull Secret names
+      pullSecrets: []
+    ## @param platform.backend.resources [object] Backend container resources (requests, limits)
+    resources: {}
+    ## @param platform.backend.maxArtifactSize Largest project artifact (a jar) a deploy may bring, as Spring reads a size (500MB, 2GB); empty: no limit. The pods fetch it from the backend at start
+    maxArtifactSize: ""
+
+## @section Persistence (headless=false)
+persistence:
+  postgres:
+    image:
+      ## @param persistence.postgres.image.registry The backend's PostgreSQL image registry
+      registry: ""
+      ## @param persistence.postgres.image.repository The backend's PostgreSQL image repository; its data lives on the PersistentVolumeClaim db (storage)
+      repository: postgres
+      ## @param persistence.postgres.image.tag The backend's PostgreSQL image tag, used only with allowTags
+      tag: "18"
+      ## @param persistence.postgres.image.digest The backend's PostgreSQL image digest (sha256:…), the chart's pin of postgres:18; wins over the tag
+      digest: sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+      ## @param persistence.postgres.image.pullPolicy The backend's PostgreSQL image pull policy
+      pullPolicy: IfNotPresent
+      ## @param persistence.postgres.image.pullSecrets The backend's PostgreSQL image pull Secret names
+      pullSecrets: []
+    ## @param persistence.postgres.resources [object] The backend's PostgreSQL container resources (requests, limits)
+    resources: {}
+    ## @param persistence.postgres.existingSecret A Secret you create with the database password under the key password; empty: the chart generates the Secret db and keeps it with lookup, which a render without a cluster (Argo CD, helm template | kubectl apply) cannot see, so every sync makes a new password the kept database refuses: set one there
+    existingSecret: ""
+    storage:
+      ## @param persistence.postgres.storage.size The size of the PersistentVolumeClaim db the database keeps its data on (the spaces, the airlocks, the audit trail); helm uninstall deletes it
+      size: 8Gi
+      ## @param persistence.postgres.storage.storageClass Its StorageClass; empty: the cluster's default
+      storageClass: ""

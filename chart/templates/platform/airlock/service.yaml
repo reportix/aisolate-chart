@@ -1,0 +1,16 @@
+# Discovery, the well-known documents and every chat path no airlock's rule matches (404), behind one
+# Service. Every user's token reaches it, so it selects only the controller's discovery pods, which run no
+# airlock's code, never an airlock pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: aisolate
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    aisolate.dev/role: discovery
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP

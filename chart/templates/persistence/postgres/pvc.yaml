@@ -1,0 +1,17 @@
+{{- if not .Values.headless }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: db
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with .Values.persistence.postgres.storage.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.postgres.storage.size | quote }}
+{{- end }}

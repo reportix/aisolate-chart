@@ -1,0 +1,4 @@
+{{- if not .Values.headless }}
+{{- /* A deploy's artifact has no size limit but platform.backend.maxArtifactSize, which the backend applies itself: nginx neither caps nor spools it. */}}
+{{ include "aisolate.ingress" (dict "name" "backend" "host" .Values.platform.backend.host "port" 8080 "annotations" (dict "nginx.ingress.kubernetes.io/proxy-body-size" "0" "nginx.ingress.kubernetes.io/proxy-request-buffering" "off") "context" $) }}
+{{- end }}

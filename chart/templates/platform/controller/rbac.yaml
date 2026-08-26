@@ -1,0 +1,53 @@
+# The AIsolate controller: one per installation, namespace-scoped, leader-elected, no cluster rights.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aisolate-controller
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aisolate-controller
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: ["aisolate.dev"]
+    resources: ["globals", "spaces", "airlocks"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["aisolate.dev"]
+    resources: ["globals/status", "spaces/status", "airlocks/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  # Each airlock's audit ingest token, mounted into its airlock pod alone, and its code token, mounted into both pods. No new reach: a Deployment the
+  # controller renders could already mount any Secret of the namespace.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies", "ingresses"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aisolate-controller
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: aisolate-controller
+subjects:
+  - kind: ServiceAccount
+    name: aisolate-controller
+    namespace: {{ .Release.Namespace }}

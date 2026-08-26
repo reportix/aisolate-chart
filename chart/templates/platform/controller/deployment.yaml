@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aisolate-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    aisolate.dev/role: controller
+spec:
+  replicas: {{ .Values.platform.controller.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      aisolate.dev/role: controller
+  template:
+    metadata:
+      labels:
+        aisolate.dev/role: controller
+      annotations:
+        # The settings file: a change rolls the controller, and the backend cannot write a pod template.
+        aisolate.dev/settings: {{ include "aisolate.controllerSettings" . | quote }}
+        {{- if not .Values.headless }}
+        {{- include "aisolate.auditIngestKeyChecksum" . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: aisolate-controller
+      {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "aisolate.podSecurity" . | nindent 8 }}
+      containers:
+        - name: controller
+          image: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.controller.image "context" $) }}
+          imagePullPolicy: {{ .Values.platform.controller.image.pullPolicy }}
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            {{- if not .Values.headless }}
+            # Each airlock's audit ingest token is derived from it.
+            - name: AISOLATE_CONTROLLER_AUDIT_INGESTKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.platform.audit.existingSecret | default "audit-ingest" }}
+                  key: key
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8082
+            # Actuator: the kubelet's probes and the scraper's metrics; no Service exposes it.
+            - name: management
+              containerPort: 9464
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: management
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: management
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          {{- with .Values.platform.controller.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- include "aisolate.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - name: settings
+              mountPath: /etc/aisolate
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: settings
+          downwardAPI:
+            items:
+              - path: settings.yaml
+                fieldRef:
+                  fieldPath: metadata.annotations['aisolate.dev/settings']
+        - name: tmp
+          emptyDir: {}

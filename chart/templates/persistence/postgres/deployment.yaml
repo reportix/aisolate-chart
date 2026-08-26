@@ -1,0 +1,68 @@
+{{- if not .Values.headless }}
+# The backend's database (spaces, airlocks, the audit trail), on the PersistentVolumeClaim db: it outlives the pod.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+      annotations:
+        {{- include "aisolate.dbPasswordChecksum" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "aisolate.podSecurity" . | nindent 8 }}
+        runAsUser: 999    # the image's postgres user; runAsNonRoot needs the number to verify
+        runAsGroup: 999
+        fsGroup: 999      # the data volume writable by it
+      containers:
+        - name: postgres
+          image: {{ include "aisolate.image" (dict "imageRoot" .Values.persistence.postgres.image "context" $) }}
+          imagePullPolicy: {{ .Values.persistence.postgres.image.pullPolicy }}
+          env:
+            - name: POSTGRES_DB
+              value: aisolate
+            - name: POSTGRES_USER
+              value: aisolate
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.persistence.postgres.existingSecret | default "db" }}
+                  key: password
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, aisolate, -d, aisolate]
+            periodSeconds: 5
+          {{- with .Values.persistence.postgres.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- include "aisolate.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+            - name: socket
+              mountPath: /var/run/postgresql
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: db
+        - name: socket
+          emptyDir: {}
+{{- end }}

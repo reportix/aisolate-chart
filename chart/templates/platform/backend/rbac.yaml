@@ -1,0 +1,44 @@
+{{- if not .Values.headless }}
+# The backend: the AIsolate UI's API, the scratchpad, export and deploy; after every write it applies the
+# Global, or the space's Space and Airlock resources, to the data plane, where the controller renders the pods;
+# the pods fetch their airlock's code from it.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+---
+# What the backend writes into the data-plane namespace: the three kinds and the data sources' credential
+# Secrets; its DELETE /v1/spaces deletes them again and waits, read-only, for
+# the airlock and tool-server pods.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backend-apply
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: ["aisolate.dev"]
+    resources: ["globals", "spaces", "airlocks"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  # Never get, list, watch, patch or update: their responses carry the Secret's data.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backend-apply
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: backend-apply
+subjects:
+  - kind: ServiceAccount
+    name: backend
+    namespace: {{ .Release.Namespace }}
+{{- end }}

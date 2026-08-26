@@ -1,0 +1,128 @@
+{{- if not .Values.headless }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+      annotations:
+        {{- include "aisolate.dbPasswordChecksum" . | nindent 8 }}
+        {{- include "aisolate.auditIngestKeyChecksum" . | nindent 8 }}
+    spec:
+      serviceAccountName: backend
+      {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "aisolate.podSecurity" . | nindent 8 }}
+      containers:
+        - name: backend
+          image: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.backend.image "context" $) }}
+          imagePullPolicy: {{ .Values.platform.backend.image.pullPolicy }}
+          env:
+            - name: AISOLATE_DB_URL
+              value: "jdbc:postgresql://db:5432/aisolate"
+            - name: AISOLATE_DB_USERNAME
+              value: aisolate
+            - name: AISOLATE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.persistence.postgres.existingSecret | default "db" }}
+                  key: password
+            - name: AISOLATE_ISSUER_URI
+              value: {{ .Values.platform.identity.issuerUri | quote }}
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI
+              value: {{ .Values.platform.identity.jwkSetUri | quote }}
+            - name: AISOLATE_ROLES_CLAIM
+              value: {{ .Values.platform.identity.rolesClaim | quote }}
+            # The release's host: every endpoint the AIsolate UI shows and the CLI prints is the pod's.
+            - name: AISOLATE_PUBLIC_URL
+              value: {{ .Values.platform.ingress.publicUrl | quote }}
+            - name: AISOLATE_CORS_ALLOWED_ORIGINS
+              value: "{{ include "aisolate.scheme" . }}://{{ .Values.platform.frontend.host }}"
+            - name: AISOLATE_CLUSTER_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            # The ingest port: the airlock pods hand their audit lines over, both pods fetch their code, each with its airlock's token.
+            - name: AISOLATE_AUDIT_INGEST_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.platform.audit.existingSecret | default "audit-ingest" }}
+                  key: key
+            - name: AISOLATE_AUDIT_INGEST_PORT
+              value: "8085"
+            - name: AISOLATE_AUDIT_RETENTION_MONTHS
+              value: {{ .Values.platform.audit.retentionMonths | quote }}
+            {{- with .Values.platform.backend.maxArtifactSize }}
+            - name: AISOLATE_MAX_ARTIFACT_SIZE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.platform.tracing.queryUrl }}
+            # Monitoring's trace page: the trace store's query API, which only the backend calls.
+            - name: AISOLATE_TRACING_QUERY_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.platform.metrics.queryUrl }}
+            # Monitoring's charts: Prometheus's HTTP API, which only the backend calls, with fixed queries.
+            - name: AISOLATE_METRICS_QUERY_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.platform.identity.directory.url }}
+            # The company's people, read-only: the AIsolate UI's Add users.
+            - name: AISOLATE_DIRECTORY_URL
+              value: {{ .Values.platform.identity.directory.url | quote }}
+            - name: AISOLATE_DIRECTORY_REALM
+              value: {{ required "platform.identity.directory.realm: required with directory.url" .Values.platform.identity.directory.realm | quote }}
+            - name: AISOLATE_DIRECTORY_CLIENT_ID
+              value: {{ required "platform.identity.directory.clientId: required with directory.url" .Values.platform.identity.directory.clientId | quote }}
+            - name: AISOLATE_DIRECTORY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "platform.identity.directory.existingSecret: required with directory.url" .Values.platform.identity.directory.existingSecret }}
+                  key: client-secret
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+            # The pods' port alone: the airlock pods' POST /v1/audit/events and both pods' GET /v1/code/…, no other path.
+            - name: ingest
+              containerPort: 8085
+            # Actuator: the kubelet's probes and the scraper's metrics; no Service exposes it.
+            - name: management
+              containerPort: 9464
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: management
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: management
+            initialDelaySeconds: 90
+            periodSeconds: 10
+          {{- with .Values.platform.backend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- include "aisolate.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # Also where a deploy's artifact lands while the backend reads and stores it: no size limit here.
+        - name: tmp
+          emptyDir: {}
+{{- end }}
