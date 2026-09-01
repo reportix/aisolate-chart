@@ -7,3 +7,9 @@ Create the Secrets the export's secretRefs name (keys username and password), th
 its code ConfigMaps included: kubectl apply -f <export> -n {{ .Release.Namespace }}
 {{- end }}
 Status: kubectl get spaces,airlocks -n {{ .Release.Namespace }}
+{{- if not .Values.platform.egress.apiServer.cidr }}
+
+WARNING: platform.egress.apiServer.cidr is empty: the controller and the backend may reach any address on
+{{ join "/" .Values.platform.egress.apiServer.ports }}. Set it to the API server's address (kubectl get endpoints kubernetes -n default),
+unless the CNI cannot match it by ipBlock (Cilium).
+{{- end }}

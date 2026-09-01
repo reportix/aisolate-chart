@@ -1,0 +1,18 @@
+# The controller is AIsolate's own code and reaches the DNS and the API server; only a scraper reaches it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aisolate-controller
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      aisolate.dev/role: controller
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- include "aisolate.scraperIngress" . | nindent 4 }}
+  egress:
+    {{- include "aisolate.dnsEgress" . | nindent 4 }}
+    {{- include "aisolate.apiServerEgress" . | nindent 4 }}

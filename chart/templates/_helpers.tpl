@@ -79,6 +79,100 @@ seccompProfile:
   type: RuntimeDefault
 {{- end -}}
 
+{{/* The ingress rule of a pod serving /actuator/prometheus: a scraper in any namespace, by the fixed label
+     aisolate.dev/scraper=true, on the management port 9464 alone, which no Service exposes. The controller
+     renders the same rule on the airlock and tool server pods. */}}
+{{- define "aisolate.scraperIngress" -}}
+- from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          aisolate.dev/scraper: "true"
+  ports:
+    - port: 9464
+      protocol: TCP
+{{- end -}}
+
+{{/* A values peer map as one NetworkPolicyPeer list entry: selectors under matchLabels, or an ipBlock. */}}
+{{- define "aisolate.policyPeer" -}}
+{{- if .cidr }}
+- ipBlock:
+    cidr: {{ .cidr | quote }}
+{{- else }}
+-
+  {{- if .namespaceSelector }}
+  namespaceSelector:
+    matchLabels: {{ toJson .namespaceSelector }}
+  {{- end }}
+  {{- if .podSelector }}
+  podSelector:
+    matchLabels: {{ toJson .podSelector }}
+  {{- end }}
+{{- end }}
+{{- end -}}
+
+{{/* The egress rule to the cluster DNS, port 53 over UDP and TCP. */}}
+{{- define "aisolate.dnsEgress" -}}
+- to:
+{{ include "aisolate.policyPeer" .Values.platform.egress.dns | indent 4 }}
+  ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+{{- end -}}
+
+{{/* The egress rule to the Kubernetes API server: its ports, at its cidr when set. Without a cidr the rule names
+     no peer, since CNIs disagree on whether an ipBlock matches a node-hosted API server (Cilium does not). */}}
+{{- define "aisolate.apiServerEgress" -}}
+- ports:
+  {{- range .Values.platform.egress.apiServer.ports }}
+    - port: {{ . }}
+      protocol: TCP
+  {{- end }}
+  {{- with .Values.platform.egress.apiServer.cidr }}
+  to:
+    - ipBlock:
+        cidr: {{ . | quote }}
+  {{- end }}
+{{- end -}}
+
+{{/* The ingress rule from the ingress controller (platform.egress.ingressFrom) to one port. */}}
+{{- define "aisolate.ingressControllerIngress" -}}
+- from:
+{{ include "aisolate.policyPeer" .context.Values.platform.egress.ingressFrom | indent 4 }}
+  ports:
+    - port: {{ .port }}
+      protocol: TCP
+{{- end -}}
+
+{{/* A NetworkPolicy peer map for the controller's settings: label keys hold dots, and Spring's map
+     binding splits a dotted key unless it is bracketed, so every key is written as "[key]". */}}
+{{- define "aisolate.peer" -}}
+{{- $peer := . -}}
+{{- /* What no policy would bound fails the render; the controller checks the same at start. */ -}}
+{{- if and $peer.cidr (or $peer.namespaceSelector $peer.podSelector) }}{{ fail "a peer is a cidr or selectors, not both" }}{{ end -}}
+{{- if and $peer.cidr (lt (int (regexReplaceAll "^[^/]*/?" $peer.cidr "")) 8) }}{{ fail (printf "the cidr %s is too wide: /8 or longer" $peer.cidr) }}{{ end -}}
+{{- if $peer.cidr }}
+cidr: {{ $peer.cidr | quote }}
+{{- end }}
+{{- if $peer.namespaceSelector }}
+namespaceSelector:
+{{- range $k, $v := $peer.namespaceSelector }}
+  "[{{ $k }}]": {{ $v | quote }}
+{{- end }}
+{{- end }}
+{{- if $peer.podSelector }}
+podSelector:
+{{- range $k, $v := $peer.podSelector }}
+  "[{{ $k }}]": {{ $v | quote }}
+{{- end }}
+{{- end }}
+{{- if $peer.port }}
+port: {{ $peer.port }}
+{{- end }}
+{{- end -}}
+
 {{/* An Ingress's annotations: the chart's nginx ones (plus .extra), under platform.ingress.annotations. */}}
 {{- define "aisolate.ingressAnnotations" -}}
 {{- $nginx := dict "nginx.ingress.kubernetes.io/proxy-read-timeout" "600" "nginx.ingress.kubernetes.io/proxy-buffering" "off" -}}

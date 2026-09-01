@@ -1,0 +1,89 @@
+{{- if not .Values.headless }}
+# Inside the namespace's default-deny: the ingress controller and the scraper reach the backend, the airlock and
+# tool server pods its ingest port (audit lines, the airlock's code); it reaches the DNS, its database, the identity provider, the
+# trace store and Prometheus when Monitoring has them, and the API server. The airlock and tool server pods keep the
+# policies the controller renders.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- include "aisolate.ingressControllerIngress" (dict "port" 8080 "context" $) | nindent 4 }}
+    {{- include "aisolate.scraperIngress" . | nindent 4 }}
+    - from:
+        - podSelector:
+            matchLabels:
+              aisolate.dev/role: airlock
+        - podSelector:
+            matchLabels:
+              aisolate.dev/role: tool-server
+      ports:
+        - port: 8085
+          protocol: TCP
+  egress:
+    {{- include "aisolate.dnsEgress" . | nindent 4 }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app: db
+      ports:
+        - port: 5432
+          protocol: TCP
+    {{- with .Values.platform.identity.egress }}
+    - to:
+{{ include "aisolate.policyPeer" . | indent 8 }}
+      {{- with .port }}
+      ports:
+        - port: {{ . }}
+          protocol: TCP
+      {{- end }}
+    {{- else }}
+    # The identity provider outside the cluster: HTTPS to a public address.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+      ports:
+        - port: 443
+          protocol: TCP
+    {{- end }}
+    {{- if .Values.platform.tracing.queryUrl }}
+    {{- $store := .Values.platform.tracing.egress | default dict }}
+    {{- if not (or $store.cidr $store.namespaceSelector $store.podSelector) }}
+    {{- fail "platform.tracing.egress: required with platform.tracing.queryUrl, the trace store's peer (namespaceSelector and podSelector, or cidr) and port" }}
+    {{- end }}
+    # The trace store's query API, for Monitoring: that peer on that port alone.
+    - to:
+{{ include "aisolate.policyPeer" $store | indent 8 }}
+      ports:
+        - port: {{ required "platform.tracing.egress.port: required with platform.tracing.queryUrl" $store.port }}
+          protocol: TCP
+    {{- end }}
+    {{- if .Values.platform.metrics.queryUrl }}
+    {{- $prometheus := .Values.platform.metrics.egress | default dict }}
+    {{- if not (or $prometheus.cidr $prometheus.namespaceSelector $prometheus.podSelector) }}
+    {{- fail "platform.metrics.egress: required with platform.metrics.queryUrl, Prometheus's peer (namespaceSelector and podSelector, or cidr) and port" }}
+    {{- end }}
+    # Prometheus's HTTP API, for Monitoring's charts: that peer on that port alone.
+    - to:
+{{ include "aisolate.policyPeer" $prometheus | indent 8 }}
+      ports:
+        - port: {{ required "platform.metrics.egress.port: required with platform.metrics.queryUrl" $prometheus.port }}
+          protocol: TCP
+    {{- end }}
+    {{- include "aisolate.apiServerEgress" . | nindent 4 }}
+{{- end }}

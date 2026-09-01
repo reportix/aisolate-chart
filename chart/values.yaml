@@ -11,7 +11,7 @@ common: {}
 
 ## @section Common parameters
 
-## @param headless Install without the AIsolate UI: the CRDs, the controller, the aisolate Service and its routes. false adds the AIsolate UI's backend and the backend's database. A bool, never a string
+## @param headless Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes. false adds the AIsolate UI's backend and the backend's database. A bool, never a string
 headless: true
 
 ## @param allowTags Let tag-only images render, for clusters that build their own images; off, every AIsolate image needs its digest
@@ -98,11 +98,13 @@ platform:
     jwkSetUri: ""
     ## @param platform.identity.rolesClaim Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups)
     rolesClaim: realm_access.roles
+    ## @param platform.identity.egress [object] The provider as a NetworkPolicy peer, when it runs in the cluster or at a private address: namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required); empty: the chart's Keycloak when it answers, else the backend reaches it over HTTPS at a public address
+    egress: {}
     # The company's people, read-only, for the AIsolate UI's Add users (headless=false): the backend searches them and
     # refuses to add an e-mail nobody signs in with. AIsolate never creates, invites or deletes anyone; admission still
-    # reads the spaces' and airlocks' e-mail lists alone. Keycloak's admin API.
+    # reads the spaces' and airlocks' e-mail lists alone. Keycloak's admin API, reached through identity.egress.
     directory:
-      ## @param platform.identity.directory.url Keycloak's base URL (no /realms), e.g. https://idp.example.com; empty: no directory, users are typed e-mails
+      ## @param platform.identity.directory.url Keycloak's base URL (no /realms), on the provider's host so identity.egress covers it, e.g. https://idp.example.com; empty: no directory, users are typed e-mails
       url: ""
       ## @param platform.identity.directory.realm The realm whose users the AIsolate UI picks from
       realm: ""
@@ -111,8 +113,28 @@ platform:
       ## @param platform.identity.directory.existingSecret The Secret with that client's secret under the key client-secret, in the release's namespace
       existingSecret: ""
 
+  egress:
+    ## @param platform.egress.dns [object] The cluster DNS as a peer (default: kube-dns in kube-system, port 53): namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required)
+    dns:
+      namespaceSelector:
+        kubernetes.io/metadata.name: kube-system
+      podSelector:
+        k8s-app: kube-dns
+      port: 53
+    ## @param platform.egress.ingressFrom [object] The only pods that may reach an airlock pod (default: the ingress-nginx namespace): namespaceSelector, podSelector or cidr (/8 or longer, never with selectors)
+    ingressFrom:
+      namespaceSelector:
+        kubernetes.io/metadata.name: ingress-nginx
+    apiServer:
+      ## @param platform.egress.apiServer.cidr The Kubernetes API server's address, the controller's and the backend's way to it, e.g. the kubernetes Endpoints' IP/32 (kubectl get endpoints kubernetes -n default); empty: any address on the ports, which the install's notes warn of (on Cilium an ipBlock does not match a node-hosted API server: leave it empty there)
+      cidr: ""
+      ## @param platform.egress.apiServer.ports [array] The API server's ports as the pods' traffic reaches it after the Service: 443 on most managed clusters, 6443 on kubeadm, k3s and OpenShift, 8443 on minikube
+      ports: [443, 6443, 8443]
+    ## @param platform.egress.hosts [object] The hosts of every LLM and data source defined for all of AIsolate or by a space or an airlock, each with its NetworkPolicy peer: cidr (/8 or longer), or namespaceSelector and podSelector, never both, plus port (required); an airlock that resolves an unmapped host is Invalid, and a global entry with one is left out of every catalog
+    hosts: {}
+
   observability:
-    ## @param platform.observability.otlpEndpoint OTLP/HTTP base URL the airlock and tool server pods send their traces to, e.g. an OpenTelemetry Collector, http://otel-collector.monitoring.svc:4318 (the pods append /v1/traces); empty: no trace leaves the pods
+    ## @param platform.observability.otlpEndpoint OTLP/HTTP base URL the airlock and tool server pods send their traces to, e.g. an OpenTelemetry Collector, http://otel-collector.monitoring.svc:4318 (the pods append /v1/traces); its host must be in platform.egress.hosts, or every space is Invalid; empty: no trace leaves the pods
     otlpEndpoint: ""
 
   # The AIsolate UI's Monitoring (headless=false): the backend reads each trace from the trace store's query API in
@@ -120,12 +142,16 @@ platform:
   tracing:
     ## @param platform.tracing.queryUrl The trace store's query API the backend reads, Jaeger's (http://jaeger.monitoring.svc:16686) or any store that answers GET /api/traces/{id} as Jaeger does; empty: the AIsolate UI has no Monitoring
     queryUrl: ""
+    ## @param platform.tracing.egress [object] The trace store as the backend's NetworkPolicy peer, required with queryUrl: namespaceSelector and podSelector, or cidr, plus its query port
+    egress: {}
 
   # Monitoring's Metrics tab (headless=false): the backend asks the Prometheus that scrapes the pods a fixed set of
   # queries, scoped to the caller's spaces by the series' space label; the browser never calls it.
   metrics:
     ## @param platform.metrics.queryUrl The Prometheus HTTP API the backend reads, e.g. http://prometheus.monitoring.svc:9090, or any store that answers /api/v1/query and /api/v1/query_range alike; its series need the space label; empty: no Metrics tab
     queryUrl: ""
+    ## @param platform.metrics.egress [object] Prometheus as the backend's NetworkPolicy peer, required with queryUrl: namespaceSelector and podSelector, or cidr, plus its port
+    egress: {}
 
   # The audit trail is the platform's: each airlock pod hands its lines to the backend (headless=false), which keeps
   # them append-only and hash-chained per airlock. Headless has no backend: the pods print the lines to stdout alone.
