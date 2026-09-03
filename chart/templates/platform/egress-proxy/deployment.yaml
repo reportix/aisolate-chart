@@ -1,0 +1,52 @@
+{{- if .Values.platform.egress.proxy.domains }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: egress-proxy
+  namespace: {{ .Release.Namespace }}
+  labels:
+    aisolate.dev/role: egress-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      aisolate.dev/role: egress-proxy
+  template:
+    metadata:
+      labels:
+        aisolate.dev/role: egress-proxy
+      annotations:
+        aisolate.dev/envoy-yaml: {{ printf "%s\n" (include "aisolate.envoyYaml" .) | quote }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "aisolate.podSecurity" . | nindent 8 }}
+      containers:
+        - name: envoy
+          image: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.egress.proxy.image "context" $) }}
+          imagePullPolicy: {{ .Values.platform.egress.proxy.image.pullPolicy }}
+          args: ["-c", "/etc/envoy/envoy.yaml", "--disable-hot-restart"]
+          ports:
+            - containerPort: 3128
+          readinessProbe:
+            tcpSocket:
+              port: 3128
+          {{- with .Values.platform.egress.proxy.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- include "aisolate.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/envoy
+              readOnly: true
+      volumes:
+        - name: conf
+          downwardAPI:
+            items:
+              - path: envoy.yaml
+                fieldRef:
+                  fieldPath: metadata.annotations['aisolate.dev/envoy-yaml']
+{{- end }}

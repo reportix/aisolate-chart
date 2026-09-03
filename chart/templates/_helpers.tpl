@@ -19,6 +19,7 @@ the render.
 {{- define "aisolate.imagePullSecrets" -}}
 {{- include "common.images.renderPullSecrets" (dict "images" (list
     .Values.platform.controller.image
+    .Values.platform.egress.proxy.image
     .Values.platform.backend.image
     .Values.persistence.postgres.image
   ) "context" $) -}}

@@ -11,7 +11,7 @@ common: {}
 
 ## @section Common parameters
 
-## @param headless Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes. false adds the AIsolate UI's backend and the backend's database. A bool, never a string
+## @param headless Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy. false adds the AIsolate UI's backend and the backend's database. A bool, never a string
 headless: true
 
 ## @param allowTags Let tag-only images render, for clusters that build their own images; off, every AIsolate image needs its digest
@@ -130,11 +130,31 @@ platform:
       cidr: ""
       ## @param platform.egress.apiServer.ports [array] The API server's ports as the pods' traffic reaches it after the Service: 443 on most managed clusters, 6443 on kubeadm, k3s and OpenShift, 8443 on minikube
       ports: [443, 6443, 8443]
-    ## @param platform.egress.hosts [object] The hosts of every LLM and data source defined for all of AIsolate or by a space or an airlock, each with its NetworkPolicy peer: cidr (/8 or longer), or namespaceSelector and podSelector, never both, plus port (required); an airlock that resolves an unmapped host is Invalid, and a global entry with one is left out of every catalog
+    ## @param platform.egress.hosts [object] The hosts of every LLM and data source defined for all of AIsolate or by a space or an airlock, each with its NetworkPolicy peer: cidr (/8 or longer), or namespaceSelector and podSelector, never both, plus port (required); an airlock that resolves an unmapped host is Invalid, and a global entry with one is left out of every catalog; a host on platform.egress.proxy.domains needs no entry
     hosts: {}
+    proxy:
+      ## @param platform.egress.proxy.domains Hostnames the CONNECT-only egress proxy may reach on port 443: exact names, *.example.com for its subdomains, .example.com for the name and its subdomains; the proxy renders when non-empty
+      domains: []
+      image:
+        ## @param platform.egress.proxy.image.registry Egress proxy (Envoy) image registry
+        registry: ""
+        ## @param platform.egress.proxy.image.repository Egress proxy image repository
+        repository: envoyproxy/envoy
+        ## @param platform.egress.proxy.image.tag Egress proxy image tag, used only with allowTags
+        tag: distroless-v1.39.4
+        ## @param platform.egress.proxy.image.digest Egress proxy image digest (sha256:…), the chart's pin of the tag; wins over it
+        digest: sha256:ccb37e93d8274a525fe00d67287716dbe3d58bc4237d7627af9e64fae0fd25c8
+        ## @param platform.egress.proxy.image.pullPolicy Egress proxy image pull policy
+        pullPolicy: IfNotPresent
+        ## @param platform.egress.proxy.image.pullSecrets Egress proxy image pull Secret names
+        pullSecrets: []
+      ## @param platform.egress.proxy.resources [object] Egress proxy container resources (requests, limits)
+      resources:
+        requests: {cpu: 50m, memory: 64Mi}
+        limits: {cpu: 500m, memory: 256Mi}
 
   observability:
-    ## @param platform.observability.otlpEndpoint OTLP/HTTP base URL the airlock and tool server pods send their traces to, e.g. an OpenTelemetry Collector, http://otel-collector.monitoring.svc:4318 (the pods append /v1/traces); its host must be in platform.egress.hosts, or every space is Invalid; empty: no trace leaves the pods
+    ## @param platform.observability.otlpEndpoint OTLP/HTTP base URL the airlock and tool server pods send their traces to, e.g. an OpenTelemetry Collector, http://otel-collector.monitoring.svc:4318 (the pods append /v1/traces); its host must be in platform.egress.hosts or proxied, or every space is Invalid; empty: no trace leaves the pods
     otlpEndpoint: ""
 
   # The AIsolate UI's Monitoring (headless=false): the backend reads each trace from the trace store's query API in

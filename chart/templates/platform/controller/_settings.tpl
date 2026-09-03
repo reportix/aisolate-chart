@@ -36,6 +36,11 @@ aisolate:
 {{ include "aisolate.peer" $peer | indent 10 }}
 {{- else }} {}
 {{- end }}
+      proxy:
+        enabled: {{ gt (len .Values.platform.egress.proxy.domains) 0 }}
+        host: egress
+        port: 3128
+        domains: {{ toJson .Values.platform.egress.proxy.domains }}
     airlockPods:
       replicas: {{ .Values.platform.airlock.replicas }}
       runtimeClassName: {{ .Values.platform.airlock.runtimeClassName | quote }}
