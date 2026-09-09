@@ -20,6 +20,7 @@ the render.
 {{- include "common.images.renderPullSecrets" (dict "images" (list
     .Values.platform.controller.image
     .Values.platform.egress.proxy.image
+    .Values.platform.frontend.image
     .Values.platform.backend.image
     .Values.persistence.postgres.image
   ) "context" $) -}}

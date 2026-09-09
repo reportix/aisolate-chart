@@ -11,7 +11,7 @@ common: {}
 
 ## @section Common parameters
 
-## @param headless Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy. false adds the AIsolate UI's backend and the backend's database. A bool, never a string
+## @param headless Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy. false adds the AIsolate UI (frontend, backend, the backend's database). A bool, never a string
 headless: true
 
 ## @param allowTags Let tag-only images render, for clusters that build their own images; off, every AIsolate image needs its digest
@@ -86,7 +86,7 @@ platform:
     host: aisolate.example.com
     ## @param platform.ingress.publicUrl The release's public URL; its scheme serves the AIsolate UI's hosts too
     publicUrl: https://aisolate.example.com
-    ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also backend-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too
+    ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too
     tls: false
     ## @param platform.ingress.annotations [object] Annotations of every chart Ingress, over the chart's nginx ones, e.g. cert-manager.io/cluster-issuer
     annotations: {}
@@ -188,6 +188,21 @@ platform:
   frontend:
     ## @param platform.frontend.host AIsolate UI host (headless=false)
     host: ui.aisolate.example.com
+    image:
+      ## @param platform.frontend.image.registry AIsolate UI image registry
+      registry: ""
+      ## @param platform.frontend.image.repository AIsolate UI image repository; the image carries the backend's URL and the identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)
+      repository: aisolate/ui
+      ## @param platform.frontend.image.tag AIsolate UI image tag, used only with allowTags; empty: the chart's appVersion
+      tag: ""
+      ## @param platform.frontend.image.digest AIsolate UI image digest (sha256:…); required unless allowTags
+      digest: ""
+      ## @param platform.frontend.image.pullPolicy AIsolate UI image pull policy
+      pullPolicy: IfNotPresent
+      ## @param platform.frontend.image.pullSecrets AIsolate UI image pull Secret names
+      pullSecrets: []
+    ## @param platform.frontend.resources [object] AIsolate UI container resources (requests, limits)
+    resources: {}
 
   backend:
     ## @param platform.backend.host Backend host (headless=false): the AIsolate UI's API and the CLI's endpoint

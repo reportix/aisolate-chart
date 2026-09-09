@@ -1,6 +1,7 @@
 AIsolate {{ .Chart.Version }} in namespace {{ .Release.Namespace }}{{ if .Values.headless }}, headless{{ else }}, with the AIsolate UI{{ end }}.
 
 {{- if not .Values.headless }}
+AIsolate UI   {{ include "aisolate.scheme" . }}://{{ .Values.platform.frontend.host }}
 Backend         {{ include "aisolate.scheme" . }}://{{ .Values.platform.backend.host }}   (the CLI's endpoint)
 {{- else }}
 Create the Secrets the export's secretRefs name (keys username and password), then apply the export,

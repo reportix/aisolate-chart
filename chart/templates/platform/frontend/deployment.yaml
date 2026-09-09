@@ -1,0 +1,48 @@
+{{- if not .Values.headless }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ui
+  template:
+    metadata:
+      labels:
+        app: ui
+    spec:
+      automountServiceAccountToken: false
+      {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        runAsUser: 1000   # the image's `node` user; runAsNonRoot needs the number to verify
+        {{- include "aisolate.podSecurity" . | nindent 8 }}
+      containers:
+        - name: ui
+          image: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.frontend.image "context" $) }}
+          imagePullPolicy: {{ .Values.platform.frontend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 5
+          {{- with .Values.platform.frontend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- include "aisolate.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - name: cache
+              mountPath: /app/frontend/.next/cache
+      volumes:
+        - name: cache
+          emptyDir: {}
+{{- end }}

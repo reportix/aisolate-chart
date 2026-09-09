@@ -1,0 +1,20 @@
+{{- if not .Values.headless }}
+# Inside the namespace's default-deny: the browser reaches the UI through the ingress controller; the UI reaches
+# nothing (every API call is the browser's). The airlock and tool server pods keep the policies the controller
+# renders.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ui
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: ui
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- include "aisolate.ingressControllerIngress" (dict "port" 3000 "context" $) | nindent 4 }}
+  egress: []
+{{- end }}
