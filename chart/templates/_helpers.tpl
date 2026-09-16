@@ -23,6 +23,7 @@ the render.
     .Values.platform.frontend.image
     .Values.platform.backend.image
     .Values.persistence.postgres.image
+    .Values.test.image
   ) "context" $) -}}
 {{- end -}}
 

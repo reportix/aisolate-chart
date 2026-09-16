@@ -1,0 +1,76 @@
+{{- $ingressNs := "" }}
+{{- with .Values.platform.egress.ingressFrom }}{{ with .namespaceSelector }}{{ $ingressNs = index . "kubernetes.io/metadata.name" | default "" }}{{ end }}{{ end }}
+# helm test: from a pod of the data-plane namespace that is allowed to try, the release answers through the
+# ingress and neither its discovery pods nor a tool server answer directly. The negative checks are the point:
+# they prove the CNI enforces the policy. Before the first Space (discovery pods) or the first aisolate deploy
+# (tool servers) the probes report themselves skipped.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aisolate-test
+  namespace: {{ .Release.Namespace }}
+  annotations: {"helm.sh/hook": test, "helm.sh/hook-weight": "-5", "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded,hook-failed"}
+spec:
+  podSelector:
+    matchLabels: {aisolate.dev/role: test}
+  policyTypes: [Egress]
+  egress:
+    - {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aisolate-test-reachability
+  namespace: {{ .Release.Namespace }}
+  labels: {aisolate.dev/role: test}
+  annotations: {"helm.sh/hook": test, "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"}
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  {{- include "aisolate.imagePullSecrets" . | nindent 2 }}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: probe
+      image: {{ include "aisolate.image" (dict "imageRoot" .Values.test.image "context" $) }}
+      imagePullPolicy: {{ .Values.test.image.pullPolicy }}
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: ["ALL"]}
+      command: ["/bin/sh", "-ec"]
+      args:
+        - |
+          ingress_ns="{{ $ingressNs }}"
+          airlock_pod=unknown
+          if [ -n "$ingress_ns" ]; then
+            ingress="http://{{ .Values.test.ingressService }}.$ingress_ns.svc.cluster.local"
+            echo "positive: the release answers through the ingress controller (401 without a token proves the path)"
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H "Host: {{ .Values.platform.ingress.host }}" "$ingress/v1/airlocks" || true)
+            case "$code" in
+              401) airlock_pod=yes ;;
+              503) airlock_pod=no; echo "skipped: no discovery pod yet (503); rerun helm test once a Space exists" ;;
+              *) echo "expected 401 through the ingress, got $code"; exit 1 ;;
+            esac
+          else
+            echo "skipped: the ingress peer is a cidr, not a namespace; no positive probe from here"
+          fi
+          echo "negative: the discovery pods must be unreachable from a pod that is not the ingress controller"
+          if curl -s -o /dev/null --max-time 5 http://aisolate:8080/actuator/health; then
+            echo "FAIL: a discovery pod answered a pod in the namespace: the network policy is not enforced"; exit 1
+          fi
+          if [ "$airlock_pod" = no ]; then echo "skipped: no discovery pod to find unreachable"; else echo "ok: discovery pods unreachable"; fi
+          for svc in {{ range .Values.test.toolServers }}{{ . }} {{ end }}; do
+            if getent hosts "$svc" >/dev/null 2>&1; then
+              echo "negative: $svc must be unreachable from anything but its airlock's airlock pod"
+              if curl -s -o /dev/null --max-time 5 "http://$svc:8081/actuator/health"; then
+                echo "FAIL: $svc answered a pod that is not an airlock pod: the network policy is not enforced"; exit 1
+              fi
+              echo "ok: $svc unreachable"
+            else
+              echo "skipped: $svc not present (no airlock deployed yet)"
+            fi
+          done
+          echo "reachability checks passed"

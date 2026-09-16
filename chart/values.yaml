@@ -20,6 +20,26 @@ allowTags: false
 ## @param extraDeploy Extra objects to deploy with the release (rendered as templates)
 extraDeploy: []
 
+## @section helm test
+test:
+  ## @param test.toolServers Tool server Services helm test must find unreachable (skipped while absent)
+  toolServers: []
+  ## @param test.ingressService The ingress controller's Service in the platform.egress.ingressFrom namespace, which helm test calls the release through
+  ingressService: ingress-nginx-controller
+  image:
+    ## @param test.image.registry helm test's curl image registry
+    registry: ""
+    ## @param test.image.repository helm test's curl image repository
+    repository: curlimages/curl
+    ## @param test.image.tag helm test's curl image tag, used only with allowTags
+    tag: "8.14.1"
+    ## @param test.image.digest helm test's curl image digest (sha256:…), the chart's pin of 8.14.1; wins over the tag
+    digest: sha256:9a1ed35addb45476afa911696297f8e115993df459278ed036182dd2cd22b67b
+    ## @param test.image.pullPolicy helm test's curl image pull policy
+    pullPolicy: IfNotPresent
+    ## @param test.image.pullSecrets helm test's curl image pull Secret names
+    pullSecrets: []
+
 ## @section Platform
 platform:
   controller:
