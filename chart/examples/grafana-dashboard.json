@@ -1,0 +1,379 @@
+{
+  "uid": "aisolate",
+  "title": "AIsolate",
+  "description": "AIsolate's metrics, by space and airlock. Pick the Prometheus data source above; the series carry a space label when the scraper copies the pod label aisolate.dev/space onto it. An exchange's trace is in the trace store the pods send OTLP to (the trace_id of its JSON answer and of its audit record).",
+  "tags": [
+    "aisolate"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "options": [],
+        "refresh": 1,
+        "regex": ""
+      },
+      {
+        "name": "space",
+        "label": "Space",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": {
+          "query": "label_values(aisolate_exchanges_total, space)",
+          "refId": "space"
+        },
+        "definition": "label_values(aisolate_exchanges_total, space)",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "options": [],
+        "refresh": 2,
+        "regex": "",
+        "sort": 1
+      },
+      {
+        "name": "airlock",
+        "label": "Airlock",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": {
+          "query": "label_values(aisolate_exchanges_total{space=~\"$space\"}, airlock)",
+          "refId": "airlock"
+        },
+        "definition": "label_values(aisolate_exchanges_total{space=~\"$space\"}, airlock)",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "options": [],
+        "refresh": 2,
+        "regex": "",
+        "sort": 1
+      }
+    ]
+  },
+  "links": [],
+  "panels": [
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Exchanges per minute by airlock",
+      "description": "Questions answered, refused or failed, per airlock.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (space, airlock) (rate(aisolate_exchanges_total{space=~\"$space\", airlock=~\"$airlock\"}[1m])) * 60",
+          "legendFormat": "{{space}} / {{airlock}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "auto",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Tokens by airlock",
+      "description": "Input and output tokens the model calls used, per second, per airlock.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (space, airlock) (rate(gen_ai_client_token_usage_total{gen_ai_token_type!=\"total\", space=~\"$space\", airlock=~\"$airlock\"}[5m]))",
+          "legendFormat": "{{space}} / {{airlock}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "auto",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "bargauge",
+      "title": "Refusals by reason",
+      "description": "Refusals over the dashboard's time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (space, airlock, reason) ((max_over_time(aisolate_refusals_total{space=~\"$space\", airlock=~\"$airlock\"}[$__range]) unless aisolate_refusals_total{space=~\"$space\", airlock=~\"$airlock\"} offset $__range) or increase(aisolate_refusals_total{space=~\"$space\", airlock=~\"$airlock\"}[$__range])) > 0",
+          "legendFormat": "{{space}} / {{airlock}}: {{reason}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "continuous-BlPu"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "namePlacement": "top",
+        "text": {
+          "titleSize": 13,
+          "valueSize": 20
+        },
+        "sizing": "manual",
+        "maxVizHeight": 32,
+        "minVizHeight": 16
+      }
+    },
+    {
+      "id": 5,
+      "type": "bargauge",
+      "title": "Tool calls by tool",
+      "description": "Tool calls over the dashboard's time range.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by (space, airlock, tool) ((max_over_time(aisolate_tool_calls_total{space=~\"$space\", airlock=~\"$airlock\"}[$__range]) unless aisolate_tool_calls_total{space=~\"$space\", airlock=~\"$airlock\"} offset $__range) or increase(aisolate_tool_calls_total{space=~\"$space\", airlock=~\"$airlock\"}[$__range])) > 0",
+          "legendFormat": "{{space}} / {{airlock}}: {{tool}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "continuous-BlPu"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "namePlacement": "top",
+        "text": {
+          "titleSize": 13,
+          "valueSize": 20
+        },
+        "sizing": "manual",
+        "maxVizHeight": 32,
+        "minVizHeight": 16
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "p95 exchange duration",
+      "description": "95 percent of exchanges finish within this time.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, space, airlock) (rate(aisolate_exchange_duration_seconds_bucket{space=~\"$space\", airlock=~\"$airlock\"}[5m])))",
+          "legendFormat": "{{space}} / {{airlock}}",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "auto",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ]
+}
