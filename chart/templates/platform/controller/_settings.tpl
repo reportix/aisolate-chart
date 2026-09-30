@@ -16,6 +16,8 @@ aisolate:
     images:
       airlock: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.airlock.image "context" $) }}
       toolServer: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.toolServer.image "context" $) }}
+      airlockPython: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.airlockPython.image "context" $) }}
+      toolServerPython: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.toolServerPython.image "context" $) }}
       pullPolicy: {{ .Values.platform.airlock.image.pullPolicy }}
       allowTags: {{ .Values.allowTags }}
     identity:

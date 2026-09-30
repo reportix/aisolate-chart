@@ -99,6 +99,30 @@ platform:
       requests: {cpu: 100m, memory: 512Mi, ephemeral-storage: 128Mi}
       limits: {cpu: "1", memory: 1Gi, ephemeral-storage: 4Gi}
 
+  ## The Python runtimes: the airlock and tool server pods of an airlock whose code is Python
+  ## (spec.jar.language: python), with the Java pods' pull policy, replicas and resources.
+  airlockPython:
+    image:
+      ## @param platform.airlockPython.image.registry Python airlock image registry
+      registry: ""
+      ## @param platform.airlockPython.image.repository Python airlock image repository: the airlock pod of an airlock with Python code
+      repository: aisolate/airlock-python
+      ## @param platform.airlockPython.image.tag Python airlock image tag, used only with allowTags; empty: the chart's appVersion
+      tag: ""
+      ## @param platform.airlockPython.image.digest Python airlock image digest (sha256:…); required unless allowTags
+      digest: ""
+
+  toolServerPython:
+    image:
+      ## @param platform.toolServerPython.image.registry Python tool server image registry
+      registry: ""
+      ## @param platform.toolServerPython.image.repository Python tool server image repository: the MCP server of an airlock with Python code
+      repository: aisolate/tool-server-python
+      ## @param platform.toolServerPython.image.tag Python tool server image tag, used only with allowTags; empty: the chart's appVersion
+      tag: ""
+      ## @param platform.toolServerPython.image.digest Python tool server image digest (sha256:…); required unless allowTags
+      digest: ""
+
   ingress:
     ## @param platform.ingress.className IngressClass of every Ingress, the chart's and the controller's
     className: nginx
@@ -242,7 +266,7 @@ platform:
       pullSecrets: []
     ## @param platform.backend.resources [object] Backend container resources (requests, limits)
     resources: {}
-    ## @param platform.backend.maxArtifactSize Largest project artifact (a jar) a deploy may bring, as Spring reads a size (500MB, 2GB); empty: no limit. The pods fetch it from the backend at start
+    ## @param platform.backend.maxArtifactSize Largest project artifact (a jar or a Python zip) a deploy may bring, as Spring reads a size (500MB, 2GB); empty: no limit. The pods fetch it from the backend at start
     maxArtifactSize: ""
 
 ## @section Persistence (headless=false)
