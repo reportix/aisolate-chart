@@ -20,6 +20,7 @@ spec:
       annotations:
         {{- include "aisolate.dbPasswordChecksum" . | nindent 8 }}
         {{- include "aisolate.auditIngestKeyChecksum" . | nindent 8 }}
+        {{- include "aisolate.credentialsKeyChecksum" . | nindent 8 }}
     spec:
       serviceAccountName: backend
       {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
@@ -57,6 +58,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.platform.audit.existingSecret | default "audit-ingest" }}
+                  key: key
+            # Seals every typed API key and password; the controller never gets it.
+            - name: AISOLATE_CREDENTIALS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.platform.credentials.existingSecret | default "credentials-key" }}
                   key: key
             - name: AISOLATE_AUDIT_INGEST_PORT
               value: "8085"

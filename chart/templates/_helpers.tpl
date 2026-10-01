@@ -56,6 +56,24 @@ checksum/audit-ingest-key: {{ include "aisolate.auditIngestKey" . | sha256sum | 
 {{- end -}}
 {{- end -}}
 
+{{/* The credentials key (headless=false): the existing Secret's on an upgrade, else a new random one, kept on the
+     root context like the database's password. The backend seals every typed API key and password under it. */}}
+{{- define "aisolate.credentialsKey" -}}
+{{- if not (hasKey . "aisolateCredentialsKey") -}}
+{{- $data := (lookup "v1" "Secret" .Release.Namespace "credentials-key").data | default dict -}}
+{{- $_ := set . "aisolateCredentialsKey" (ternary (index $data "key" | default "" | b64dec) (randAlphaNum 64) (hasKey $data "key")) -}}
+{{- end -}}
+{{- index . "aisolateCredentialsKey" -}}
+{{- end -}}
+
+{{/* Rolls the backend when the credentials key changes; an existingSecret is the installer's to rotate, and the
+     chart cannot read it. */}}
+{{- define "aisolate.credentialsKeyChecksum" -}}
+{{- if not .Values.platform.credentials.existingSecret -}}
+checksum/credentials-key: {{ include "aisolate.credentialsKey" . | sha256sum | trunc 12 | quote }}
+{{- end -}}
+{{- end -}}
+
 {{/* The pod-template annotation that rolls the database and the backend together when the password changes; an
      existingSecret is the installer's to rotate, and the chart cannot read it. */}}
 {{- define "aisolate.dbPasswordChecksum" -}}

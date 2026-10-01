@@ -229,6 +229,10 @@ platform:
     ## @param platform.audit.existingSecret An existing Secret holding the audit ingest key under the key key; set: the chart creates no audit-ingest Secret and hashes none into the pod checksums, recommended for a render without cluster access (Argo CD, helm template), where lookup cannot keep the generated key; empty: the chart generates and keeps one
     existingSecret: ""
 
+  credentials:
+    ## @param platform.credentials.existingSecret An existing Secret holding the key the backend seals typed API keys and passwords with, under the key key (32+ characters); set: the chart creates no credentials-key Secret and hashes none into the backend's checksum, recommended for a render without cluster access (Argo CD, helm template); empty: the chart generates and keeps one
+    existingSecret: ""
+
   frontend:
     ## @param platform.frontend.host AIsolate UI host (headless=false)
     host: ui.aisolate.example.com
