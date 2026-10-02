@@ -1,0 +1,56 @@
+# A production install (headless): every image by digest, the customer's identity provider, the
+# hosts the airlocks may reach, the proxy as the one way out. The digests and the
+# addresses are placeholders: replace them.
+
+global:
+  imageRegistry: registry.example.com
+  # The chart's own pods only. The airlock and tool server pods run as the namespace's default
+  # ServiceAccount: kubectl patch serviceaccount default -p '{"imagePullSecrets":[{"name":"registry-credentials"}]}'
+  imagePullSecrets:
+    - registry-credentials
+
+platform:
+  controller:
+    image:
+      digest: sha256:1111111111111111111111111111111111111111111111111111111111111111
+  airlock:
+    image:
+      digest: sha256:2222222222222222222222222222222222222222222222222222222222222222
+    replicas: 2
+  toolServer:
+    image:
+      digest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+  airlockPython:
+    image:
+      digest: sha256:5555555555555555555555555555555555555555555555555555555555555555
+  toolServerPython:
+    image:
+      digest: sha256:6666666666666666666666666666666666666666666666666666666666666666
+  ingress:
+    host: aisolate.example.com
+    publicUrl: https://aisolate.example.com
+  identity:
+    issuerUri: https://idp.example.com/realms/customer
+  egress:
+    # The API server alone on its ports, for the controller and the backend:
+    # kubectl get endpoints kubernetes -n default
+    apiServer:
+      cidr: 10.0.0.1/32
+    # The hosts of every LLM and data source defined for all of AIsolate or by a space or airlock,
+    # with their peers.
+    hosts:
+      hr-db.example.com:            # the customer database, outside the cluster
+        cidr: 10.20.30.40/32
+        port: 5432
+      ollama.llm.svc:               # the LLMs, in the cluster
+        namespaceSelector:
+          kubernetes.io/metadata.name: llm
+        podSelector:
+          app: ollama
+        port: 11434
+    proxy:
+      # The identity provider is outside the cluster: the pods reach it through the proxy.
+      domains:
+        - idp.example.com
+      image:
+        digest: sha256:4444444444444444444444444444444444444444444444444444444444444444
