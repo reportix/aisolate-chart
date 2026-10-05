@@ -1,7 +1,7 @@
 ## @section Global parameters
 ## @open global
 ## @param global.imageRegistry Registry of every image, the controller-rendered airlock and tool server pods included; wins over each image's registry
-## @param global.imagePullSecrets Pull Secret names for the chart's own pods (the controller-rendered pods run as the namespace's default ServiceAccount: give it the Secret)
+## @param global.imagePullSecrets Pull Secret names for the chart's own pods (the controller-rendered pods run as the namespace's default ServiceAccount: give it the Secret, see README)
 global:
   imageRegistry: ""
   imagePullSecrets: []
@@ -75,7 +75,7 @@ platform:
       pullPolicy: IfNotPresent
     ## @param platform.airlock.replicas Replicas of every airlock pod, and of the discovery pods (the airlock image with no documents) behind the aisolate Service
     replicas: 1
-    ## @param platform.airlock.runtimeClassName RuntimeClass of every airlock pod; empty: the cluster's default
+    ## @param platform.airlock.runtimeClassName RuntimeClass of every pod the controller renders (airlock, MCP server, discovery); empty: the cluster's default
     runtimeClassName: ""
     ## @param platform.airlock.corsAllowedOrigins Browser origins the airlock pods answer, e.g. the chat's
     corsAllowedOrigins: ""

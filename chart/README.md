@@ -1,0 +1,341 @@
+# AIsolate Helm Chart
+
+AIsolate serves governed model endpoints over the organisation's own databases. This chart installs the
+custom resource definitions (`Space` and `Airlock` of `aisolate.dev/v1`), the controller that turns
+them into airlock pods and tool server pods, and the namespace's policies.
+
+`headless` decides whether the AIsolate UI comes with them:
+- `headless=true`, the default: no UI.
+- `headless=false`: the AIsolate UI as well. That is its frontend, its backend (the UI's API and the
+  CLI's endpoint) and the backend's PostgreSQL. That database keeps its data, the audit trail with it, on the
+  PersistentVolumeClaim `db` (`persistence.postgres.storage`; the cluster's default StorageClass unless you name
+  one), so it outlives the pod; `helm uninstall` deletes it. Back it up: the audit trail is only as durable as
+  that database. Only the backend reaches it, with a password the chart generates into the Secret `db` on the
+  first install.
+
+# Installation
+
+## 1. Create and label the namespace
+
+Every pod runs under the restricted Pod Security Standard, which the namespace must enforce. Helm does not
+manage the release namespace, so create it first:
+
+```
+kubectl create namespace aisolate
+kubectl label namespace aisolate pod-security.kubernetes.io/enforce=restricted
+```
+
+## 2. Customize the values
+
+Start from `examples/example-values.yaml`:
+- every AIsolate image by digest: with `allowTags=false`, the default, a tag-only image fails the render.
+  The airlock and tool server come twice, `platform.airlock`/`platform.toolServer` (Java) and
+  `platform.airlockPython`/`platform.toolServerPython`: the controller runs an airlock's pods on the pair of
+  its code's language
+- the identity provider under `platform.identity`
+- the cluster's DNS and ingress peers under `platform.egress`
+- the API server's address under `platform.egress.apiServer`: the controller and the backend reach it, and
+  without a cidr they may reach any address on its ports
+- the hosts of every LLM and data source defined for all of AIsolate or by a space or an airlock under
+  `platform.egress.hosts`, each with the NetworkPolicy peer its pods may reach: an airlock that resolves a
+  host neither mapped nor proxied is `Invalid`
+- the hostnames the egress proxy may reach
+- TLS on the Ingresses: `platform.ingress.tls` and, for cert-manager or another controller,
+  `platform.ingress.annotations`
+
+With the AIsolate UI, also set `platform.frontend.host` and `platform.backend.host`, and, to pick users from
+the company's directory instead of typing their e-mails, `platform.identity.directory`: Keycloak's base URL,
+the realm, and a confidential client whose service account holds realm-management's `view-users` and
+`query-users` only, its secret in a Secret under the key `client-secret`:
+
+```
+kubectl -n aisolate create secret generic aisolate-directory --from-literal=client-secret=<the client's secret>
+```
+
+AIsolate only reads people: it never creates, invites or deletes one, and admission still reads the spaces'
+and airlocks' e-mail lists alone. The URL must be the provider's own host, which `platform.identity.egress`
+already lets the backend reach. The UI image
+carries the backend's URL and the identity provider from its build
+(`NEXT_PUBLIC_AISOLATE_URL` and `NEXT_PUBLIC_OIDC_AUTHORITY`, build args of the UI's Dockerfile in the
+control plane repository), so build it for those hosts.
+
+For a private registry, `global.imageRegistry` reaches every image, the controller's pods included.
+`global.imagePullSecrets` reaches only the chart's own pods. The airlock and tool server pods run as the
+namespace's `default` ServiceAccount, so give the Secret to that account:
+
+```
+kubectl patch serviceaccount default -n aisolate -p '{"imagePullSecrets":[{"name":"<secret>"}]}'
+```
+
+## 3. Deploy the chart
+
+From this project's Helm package registry (channel `stable`), or from a checkout of the repository:
+
+```
+helm repo add aisolate https://gitlab.reportix.com/api/v4/projects/524/packages/helm/stable
+helm install aisolate aisolate/aisolate --namespace aisolate --values <values.yaml>
+helm install aisolate ./chart --namespace aisolate --values chart/examples/example-values.yaml
+```
+
+Helm installs `crds/` on the first install only. Apply them before every upgrade:
+
+```
+kubectl apply --server-side --force-conflicts -f chart/crds
+helm upgrade aisolate ./chart --namespace aisolate --values <values.yaml>
+```
+
+## 4. Apply the documents
+
+Headless, the export is one file: the `Space` and `Airlock` documents. An airlock's code
+(a jar or a Python zip) is fetched by its pods from the backend, so a headless install runs airlocks without
+code only; code needs the AIsolate UI (`headless: false`). First create the Secrets its `secretRef`s name, with the keys `username` and `password`:
+
+```
+kubectl create secret generic <secretRef> --namespace aisolate \
+  --from-literal=username=<user> --from-literal=password=<password>
+```
+
+Then apply the export with `kubectl apply -f`, Argo CD or Flux; check it first with
+`docker run --rm -v "$PWD:/release:ro" aisolate/airlock validate /release`. With the AIsolate UI,
+`aisolate deploy` sends one `Airlock` and its code to the backend, which applies the space and writes
+the Secrets. `kubectl get` lists the resources with their status; an airlock is `Ready` once its pod
+answers, and `Pending` with "no llm: aisolate deploy brings it" until its first deploy:
+
+```
+kubectl get spaces,airlocks --namespace aisolate
+```
+
+Once a `Space` exists, `helm test aisolate --namespace aisolate` checks that the network policies hold: the
+release answers through the ingress controller, and neither the discovery pods behind the `aisolate` Service
+nor the Services in `test.toolServers` answer any other pod. Before the first `Space` or deploy it reports
+those probes as skipped.
+
+# Audit trail
+
+The audit trail is part of AIsolate, not of your log pipeline. With the AIsolate UI (`headless: false`), every
+airlock pod hands each audit line to the backend's ingest port 8085 (`POST /v1/audit/events`), with an ingest
+token the controller renders for that airlock alone (the Secret `<space>-<airlock>-audit`, derived
+from the Secret `audit-ingest`, which the chart generates unless `platform.audit.existingSecret` names yours, and
+which only the controller and the backend read). The backend keeps the
+lines in its database, append-only and hash-chained per airlock, and serves them to the realm roles
+`aisolate-admin` and `aisolate-auditor`, and to a space's developers its own (the AIsolate UI's Audit page).
+Only the airlock and tool server pods
+reach the ingest port; no Ingress routes to it.
+
+- `platform.audit.existingSecret` (default empty): a Secret you create with the ingest key under its `key` entry. The
+  controller and the backend read it, the chart creates no `audit-ingest` Secret and puts no checksum on their pods,
+  so rolling them after a rotation is yours. Set it when the chart is rendered without cluster access (Argo CD,
+  `helm template`): there the chart cannot keep a generated key, and every sync would make a new one.
+- `platform.audit.failClosed` (default `true`): a pod keeps the lines the backend has not taken yet in a bounded
+  buffer on an `emptyDir` and retries in order; while that buffer is full it refuses new questions with 503
+  "audit unavailable". `false` answers anyway, and a line that does not fit is lost to the backend's trail.
+- `platform.audit.stdout` (default `true`): each line is also printed to the pod's stdout, for a SIEM's log
+  collector.
+- `platform.audit.retentionMonths` (default 84, seven years): the backend's daily job drops every older month
+  whole. The lines are only as durable as the backend's database (its PersistentVolumeClaim `db`): back it up.
+
+Headless installs have no backend: the airlock pods print the lines to stdout alone, whatever `stdout` says, and
+nothing fails closed. What a line holds and how the chain is checked: the control plane's
+[audit documentation](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/audit.md).
+
+# Credentials
+
+With the AIsolate UI (`headless: false`), the backend seals every typed model API key and data source login with
+AES-256-GCM under the key in the Secret `credentials-key`, which the chart generates unless
+`platform.credentials.existingSecret` names yours. Only the backend is given it; the controller and the pods are not.
+
+- `platform.credentials.existingSecret` (default empty): a Secret you create with the key (32+ characters) under its
+  `key` entry. The chart creates no `credentials-key` Secret and puts no checksum on the backend's pod, so rolling
+  it after a rotation is yours. Set it when the chart is rendered without cluster access (Argo CD, `helm template`):
+  there the chart cannot keep a generated key, and every sync would make a new one.
+
+Losing the key loses every stored credential. The Secrets the airlock and tool server pods already hold keep working;
+re-enter a credential in the AIsolate UI to make it revealable again. Back the key up with the database.
+
+# Project code
+
+A deploy brings the airlock's artifact (a jar, or a Python zip with its dependencies) to the backend, which keeps
+it in its database. Each airlock and tool server pod fetches it at start from the backend's ingest port 8085
+(`GET /v1/code/<space>/<airlock>/<digest>`) with a token the controller renders for that airlock alone
+(the Secret `<space>-<airlock>-code`, derived from the audit ingest key), checks its sha256 against the
+airlock's digest and refuses to start on a mismatch or a failed fetch. No artifact size limit by default: the
+API host's Ingress takes a body of any size (`proxy-body-size: "0"`, unbuffered), and
+`platform.backend.maxArtifactSize` (for example `500MB`) makes the backend refuse a larger one. A pod fetches its
+artifact at every start, so a project with gigabytes of packages starts slowly; its `/tmp`, at most 2Gi within the
+pod's `ephemeral-storage` limit, holds the artifact and, for Python, what it inflates to.
+
+# Observability
+
+AIsolate plugs into the monitoring the cluster already runs; the chart installs none of it. It speaks the open
+formats only, OTLP for traces and the Prometheus text format for metrics, so any backend that reads them works. We
+recommend, all Apache-2.0: the OpenTelemetry Collector in front of Jaeger for the traces, and Prometheus.
+
+- **Traces:** set `platform.observability.otlpEndpoint` to your collector's OTLP/HTTP base URL, for example
+  `http://otel-collector.monitoring.svc:4318` (the pods append `/v1/traces`), and map its host in
+  `platform.egress.hosts`. Every airlock and tool server pod then sends one trace per question. An endpoint
+  whose host is neither mapped nor proxied makes every space `Invalid`. Empty, the default, sends nothing.
+- **Metrics:** the controller, the backend, and every airlock and tool server pod serve `/actuator/prometheus`
+  without a token on the management port 9464 (container port `management`), which no Service and no Ingress
+  exposes; the kubelet probes health there too. Their NetworkPolicies admit a pod labelled
+  `aisolate.dev/scraper: "true"` from any namespace on 9464 alone, so label your Prometheus or agent pods with
+  it and scrape the `management` port.
+- **Dashboard (optional):** `examples/grafana-dashboard.json` is a Grafana 11 dashboard over Prometheus, for
+  those who view their metrics in Grafana: exchanges per minute and tokens by airlock, refusals by reason, tool
+  calls by tool and the p95 exchange duration, each by space and airlock, with a Space and an Airlock picker.
+  Import it and pick your Prometheus data source. The series name no space: for the by-space panels, copy the
+  pod label `aisolate.dev/space` onto a `space` label when you scrape (`target_label: space` from
+  `__meta_kubernetes_pod_label_aisolate_dev_space`).
+
+- **Monitoring (optional, headless=false):** set `platform.tracing.queryUrl` to the trace store's query API in
+  the cluster, for example Jaeger's `http://jaeger.monitoring.svc:16686`, and `platform.tracing.egress` to its
+  peer and port. The AIsolate UI then shows **Monitoring > Tracing**: every exchange's steps without opening the
+  trace viewer. The backend reads the store, `GET /api/traces/{id}` as Jaeger answers it, so any store that
+  answers alike works; the browser never calls it. Empty, the default, hides Monitoring. With
+  `platform.metrics.queryUrl` (your Prometheus's HTTP API, for example `http://prometheus.monitoring.svc:9090`) and
+  `platform.metrics.egress`, Monitoring also has a **Metrics** tab: the dashboard's five panels, from fixed
+  queries the backend runs, each caller's spaces alone. It needs the `space` label on the series (below).
+
+What the spans and the series hold, and never hold: the control plane's
+[observability documentation](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/observability.md).
+
+# Uninstallation
+
+```
+helm uninstall aisolate --namespace aisolate
+```
+
+Helm keeps the CRDs, and with them every `Space` and `Airlock`. To remove those as well, run
+`kubectl delete -f chart/crds`.
+
+## Parameters
+
+### Global parameters
+
+| Name                      | Description                                                                                                                                             | Value |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| `global.imageRegistry`    | Registry of every image, the controller-rendered airlock and tool server pods included; wins over each image's registry                                 | `""`  |
+| `global.imagePullSecrets` | Pull Secret names for the chart's own pods (the controller-rendered pods run as the namespace's default ServiceAccount: give it the Secret, see README) | `[]`  |
+
+### Common parameters
+
+| Name          | Description                                                                                                                                                                                                                    | Value   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| `headless`    | Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy. false adds the AIsolate UI (frontend, backend, the backend's database). A bool, never a string | `true`  |
+| `allowTags`   | Let tag-only images render, for clusters that build their own images; off, every AIsolate image needs its digest                                                                                                               | `false` |
+| `extraDeploy` | Extra objects to deploy with the release (rendered as templates)                                                                                                                                                               | `[]`    |
+
+### helm test
+
+| Name                     | Description                                                                                                              | Value                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `test.toolServers`       | Tool server Services helm test must find unreachable (skipped while absent)                                              | `[]`                                                                      |
+| `test.ingressService`    | The ingress controller's Service in the platform.egress.ingressFrom namespace, which helm test calls the release through | `ingress-nginx-controller`                                                |
+| `test.image.registry`    | helm test's curl image registry                                                                                          | `""`                                                                      |
+| `test.image.repository`  | helm test's curl image repository                                                                                        | `curlimages/curl`                                                         |
+| `test.image.tag`         | helm test's curl image tag, used only with allowTags                                                                     | `8.14.1`                                                                  |
+| `test.image.digest`      | helm test's curl image digest (sha256:…), the chart's pin of 8.14.1; wins over the tag                                   | `sha256:9a1ed35addb45476afa911696297f8e115993df459278ed036182dd2cd22b67b` |
+| `test.image.pullPolicy`  | helm test's curl image pull policy                                                                                       | `IfNotPresent`                                                            |
+| `test.image.pullSecrets` | helm test's curl image pull Secret names                                                                                 | `[]`                                                                      |
+
+### Platform
+
+| Name                                         | Description                                                                                                                                                                                                                                                                                                                                                                                           | Value                                                                     |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `platform.controller.image.registry`         | Controller image registry                                                                                                                                                                                                                                                                                                                                                                             | `""`                                                                      |
+| `platform.controller.image.repository`       | Controller image repository                                                                                                                                                                                                                                                                                                                                                                           | `aisolate/controller`                                                     |
+| `platform.controller.image.tag`              | Controller image tag, used only with allowTags; empty: the chart's appVersion                                                                                                                                                                                                                                                                                                                         | `""`                                                                      |
+| `platform.controller.image.digest`           | Controller image digest (sha256:…); required unless allowTags                                                                                                                                                                                                                                                                                                                                         | `""`                                                                      |
+| `platform.controller.image.pullPolicy`       | Controller image pull policy                                                                                                                                                                                                                                                                                                                                                                          | `IfNotPresent`                                                            |
+| `platform.controller.image.pullSecrets`      | Controller image pull Secret names                                                                                                                                                                                                                                                                                                                                                                    | `[]`                                                                      |
+| `platform.controller.replicas`               | Controller replicas (leader-elected)                                                                                                                                                                                                                                                                                                                                                                  | `1`                                                                       |
+| `platform.controller.resources`              | Controller container resources (requests, limits), e.g. for a namespace ResourceQuota                                                                                                                                                                                                                                                                                                                 | `{}`                                                                      |
+| `platform.airlock.image.registry`            | Airlock image registry                                                                                                                                                                                                                                                                                                                                                                                | `""`                                                                      |
+| `platform.airlock.image.repository`          | Airlock image repository: the core of every airlock pod the controller renders                                                                                                                                                                                                                                                                                                                        | `aisolate/airlock`                                                        |
+| `platform.airlock.image.tag`                 | Airlock image tag, used only with allowTags; empty: the chart's appVersion                                                                                                                                                                                                                                                                                                                            | `""`                                                                      |
+| `platform.airlock.image.digest`              | Airlock image digest (sha256:…); required unless allowTags                                                                                                                                                                                                                                                                                                                                            | `""`                                                                      |
+| `platform.airlock.image.pullPolicy`          | Pull policy of every pod the controller renders, airlock and tool server alike                                                                                                                                                                                                                                                                                                                        | `IfNotPresent`                                                            |
+| `platform.airlock.replicas`                  | Replicas of every airlock pod, and of the discovery pods (the airlock image with no documents) behind the aisolate Service                                                                                                                                                                                                                                                                            | `1`                                                                       |
+| `platform.airlock.runtimeClassName`          | RuntimeClass of every pod the controller renders (airlock, MCP server, discovery); empty: the cluster's default                                                                                                                                                                                                                                                                                       | `""`                                                                      |
+| `platform.airlock.corsAllowedOrigins`        | Browser origins the airlock pods answer, e.g. the chat's                                                                                                                                                                                                                                                                                                                                              | `""`                                                                      |
+| `platform.airlock.resources`                 | Requests and limits of every airlock pod and discovery pod (cpu, memory, ephemeral-storage, which holds the airlock's fetched code in /tmp, at most 2Gi): one airlock's code or load must not starve its node                                                                                                                                                                                         | `{}`                                                                      |
+| `platform.toolServer.image.registry`         | Tool server image registry                                                                                                                                                                                                                                                                                                                                                                            | `""`                                                                      |
+| `platform.toolServer.image.repository`       | Tool server image repository: one pod per airlock, rendered by the controller                                                                                                                                                                                                                                                                                                                         | `aisolate/tool-server`                                                    |
+| `platform.toolServer.image.tag`              | Tool server image tag, used only with allowTags; empty: the chart's appVersion                                                                                                                                                                                                                                                                                                                        | `""`                                                                      |
+| `platform.toolServer.image.digest`           | Tool server image digest (sha256:…); required unless allowTags                                                                                                                                                                                                                                                                                                                                        | `""`                                                                      |
+| `platform.toolServer.resources`              | Requests and limits of every MCP server (cpu, memory, ephemeral-storage, which holds the fetched code in /tmp, at most 2Gi)                                                                                                                                                                                                                                                                           | `{}`                                                                      |
+| `platform.airlockPython.image.registry`      | Python airlock image registry                                                                                                                                                                                                                                                                                                                                                                         | `""`                                                                      |
+| `platform.airlockPython.image.repository`    | Python airlock image repository: the airlock pod of an airlock with Python code                                                                                                                                                                                                                                                                                                                       | `aisolate/airlock-python`                                                 |
+| `platform.airlockPython.image.tag`           | Python airlock image tag, used only with allowTags; empty: the chart's appVersion                                                                                                                                                                                                                                                                                                                     | `""`                                                                      |
+| `platform.airlockPython.image.digest`        | Python airlock image digest (sha256:…); required unless allowTags                                                                                                                                                                                                                                                                                                                                     | `""`                                                                      |
+| `platform.toolServerPython.image.registry`   | Python tool server image registry                                                                                                                                                                                                                                                                                                                                                                     | `""`                                                                      |
+| `platform.toolServerPython.image.repository` | Python tool server image repository: the MCP server of an airlock with Python code                                                                                                                                                                                                                                                                                                                    | `aisolate/tool-server-python`                                             |
+| `platform.toolServerPython.image.tag`        | Python tool server image tag, used only with allowTags; empty: the chart's appVersion                                                                                                                                                                                                                                                                                                                 | `""`                                                                      |
+| `platform.toolServerPython.image.digest`     | Python tool server image digest (sha256:…); required unless allowTags                                                                                                                                                                                                                                                                                                                                 | `""`                                                                      |
+| `platform.ingress.className`                 | IngressClass of every Ingress, the chart's and the controller's                                                                                                                                                                                                                                                                                                                                       | `nginx`                                                                   |
+| `platform.ingress.host`                      | The release's public host: discovery and every airlock's endpoint                                                                                                                                                                                                                                                                                                                                     | `aisolate.example.com`                                                    |
+| `platform.ingress.publicUrl`                 | The release's public URL; its scheme serves the AIsolate UI's hosts too                                                                                                                                                                                                                                                                                                                               | `https://aisolate.example.com`                                            |
+| `platform.ingress.tls`                       | Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too                                                                                                                                  | `false`                                                                   |
+| `platform.ingress.annotations`               | Annotations of every chart Ingress, over the chart's nginx ones, e.g. cert-manager.io/cluster-issuer                                                                                                                                                                                                                                                                                                  | `{}`                                                                      |
+| `platform.identity.issuerUri`                | The identity provider: the issuer the pods and the backend validate tokens against                                                                                                                                                                                                                                                                                                                    | `https://idp.example.com/realms/customer`                                 |
+| `platform.identity.jwkSetUri`                | Where the pods and the backend fetch the provider's keys                                                                                                                                                                                                                                                                                                                                              | `""`                                                                      |
+| `platform.identity.rolesClaim`               | Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups)                                                                                                                                                                                                                                                              | `realm_access.roles`                                                      |
+| `platform.identity.egress`                   | The provider as a NetworkPolicy peer, when it runs in the cluster or at a private address: namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required); empty: the chart's Keycloak when it answers, else the backend reaches it over HTTPS at a public address                                                                                                        | `{}`                                                                      |
+| `platform.identity.directory.url`            | Keycloak's base URL (no /realms), on the provider's host so identity.egress covers it, e.g. https://idp.example.com; empty: no directory, users are typed e-mails                                                                                                                                                                                                                                     | `""`                                                                      |
+| `platform.identity.directory.realm`          | The realm whose users the AIsolate UI picks from                                                                                                                                                                                                                                                                                                                                                      | `""`                                                                      |
+| `platform.identity.directory.clientId`       | A confidential client whose service account holds realm-management's view-users and query-users only                                                                                                                                                                                                                                                                                                  | `""`                                                                      |
+| `platform.identity.directory.existingSecret` | The Secret with that client's secret under the key client-secret, in the release's namespace                                                                                                                                                                                                                                                                                                          | `""`                                                                      |
+| `platform.egress.dns`                        | The cluster DNS as a peer (default: kube-dns in kube-system, port 53): namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required)                                                                                                                                                                                                                                     | `{}`                                                                      |
+| `platform.egress.ingressFrom`                | The only pods that may reach an airlock pod (default: the ingress-nginx namespace): namespaceSelector, podSelector or cidr (/8 or longer, never with selectors)                                                                                                                                                                                                                                       | `{}`                                                                      |
+| `platform.egress.apiServer.cidr`             | The Kubernetes API server's address, the controller's and the backend's way to it, e.g. the kubernetes Endpoints' IP/32 (kubectl get endpoints kubernetes -n default); empty: any address on the ports, which the install's notes warn of (on Cilium an ipBlock does not match a node-hosted API server: leave it empty there)                                                                        | `""`                                                                      |
+| `platform.egress.apiServer.ports`            | The API server's ports as the pods' traffic reaches it after the Service: 443 on most managed clusters, 6443 on kubeadm, k3s and OpenShift, 8443 on minikube                                                                                                                                                                                                                                          | `[]`                                                                      |
+| `platform.egress.hosts`                      | The hosts of every LLM and data source defined for all of AIsolate or by a space or an airlock, each with its NetworkPolicy peer: cidr (/8 or longer), or namespaceSelector and podSelector, never both, plus port (required); an airlock that resolves an unmapped host is Invalid, and a global entry with one is left out of every catalog; a host on platform.egress.proxy.domains needs no entry | `{}`                                                                      |
+| `platform.egress.proxy.domains`              | Hostnames the CONNECT-only egress proxy may reach on port 443: exact names, *.example.com for its subdomains, .example.com for the name and its subdomains; the proxy renders when non-empty                                                                                                                                                                                                          | `[]`                                                                      |
+| `platform.egress.proxy.image.registry`       | Egress proxy (Envoy) image registry                                                                                                                                                                                                                                                                                                                                                                   | `""`                                                                      |
+| `platform.egress.proxy.image.repository`     | Egress proxy image repository                                                                                                                                                                                                                                                                                                                                                                         | `envoyproxy/envoy`                                                        |
+| `platform.egress.proxy.image.tag`            | Egress proxy image tag, used only with allowTags                                                                                                                                                                                                                                                                                                                                                      | `distroless-v1.39.4`                                                      |
+| `platform.egress.proxy.image.digest`         | Egress proxy image digest (sha256:…), the chart's pin of the tag; wins over it                                                                                                                                                                                                                                                                                                                        | `sha256:ccb37e93d8274a525fe00d67287716dbe3d58bc4237d7627af9e64fae0fd25c8` |
+| `platform.egress.proxy.image.pullPolicy`     | Egress proxy image pull policy                                                                                                                                                                                                                                                                                                                                                                        | `IfNotPresent`                                                            |
+| `platform.egress.proxy.image.pullSecrets`    | Egress proxy image pull Secret names                                                                                                                                                                                                                                                                                                                                                                  | `[]`                                                                      |
+| `platform.egress.proxy.resources`            | Egress proxy container resources (requests, limits)                                                                                                                                                                                                                                                                                                                                                   | `{}`                                                                      |
+| `platform.observability.otlpEndpoint`        | OTLP/HTTP base URL the airlock and tool server pods send their traces to, e.g. an OpenTelemetry Collector, http://otel-collector.monitoring.svc:4318 (the pods append /v1/traces); its host must be in platform.egress.hosts or proxied, or every space is Invalid; empty: no trace leaves the pods                                                                                                   | `""`                                                                      |
+| `platform.tracing.queryUrl`                  | The trace store's query API the backend reads, Jaeger's (http://jaeger.monitoring.svc:16686) or any store that answers GET /api/traces/{id} as Jaeger does; empty: the AIsolate UI has no Monitoring                                                                                                                                                                                                  | `""`                                                                      |
+| `platform.tracing.egress`                    | The trace store as the backend's NetworkPolicy peer, required with queryUrl: namespaceSelector and podSelector, or cidr, plus its query port                                                                                                                                                                                                                                                          | `{}`                                                                      |
+| `platform.metrics.queryUrl`                  | The Prometheus HTTP API the backend reads, e.g. http://prometheus.monitoring.svc:9090, or any store that answers /api/v1/query and /api/v1/query_range alike; its series need the space label; empty: no Metrics tab                                                                                                                                                                                  | `""`                                                                      |
+| `platform.metrics.egress`                    | Prometheus as the backend's NetworkPolicy peer, required with queryUrl: namespaceSelector and podSelector, or cidr, plus its port                                                                                                                                                                                                                                                                     | `{}`                                                                      |
+| `platform.audit.failClosed`                  | While an airlock pod's on-disk buffer of lines the backend has not taken is full, it refuses new questions with 503 "audit unavailable"; false: it answers and the line is lost from the backend's trail (stdout keeps it)                                                                                                                                                                            | `true`                                                                    |
+| `platform.audit.stdout`                      | Each audit line is also printed to the airlock pod's stdout, for a SIEM's log collector; headless keeps it on regardless                                                                                                                                                                                                                                                                              | `true`                                                                    |
+| `platform.audit.retentionMonths`             | Months of audit lines the backend keeps (84: seven years); its daily job drops each older month whole                                                                                                                                                                                                                                                                                                 | `84`                                                                      |
+| `platform.audit.existingSecret`              | An existing Secret holding the audit ingest key under the key key; set: the chart creates no audit-ingest Secret and hashes none into the pod checksums, recommended for a render without cluster access (Argo CD, helm template), where lookup cannot keep the generated key; empty: the chart generates and keeps one                                                                               | `""`                                                                      |
+| `platform.credentials.existingSecret`        | An existing Secret holding the key the backend seals typed API keys and passwords with, under the key key (32+ characters); set: the chart creates no credentials-key Secret and hashes none into the backend's checksum, recommended for a render without cluster access (Argo CD, helm template); empty: the chart generates and keeps one                                                          | `""`                                                                      |
+| `platform.frontend.host`                     | AIsolate UI host (headless=false)                                                                                                                                                                                                                                                                                                                                                                     | `ui.aisolate.example.com`                                                 |
+| `platform.frontend.image.registry`           | AIsolate UI image registry                                                                                                                                                                                                                                                                                                                                                                            | `""`                                                                      |
+| `platform.frontend.image.repository`         | AIsolate UI image repository; the image carries the backend's URL and the identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)                                                                                                                                                                                                                                     | `aisolate/ui`                                                             |
+| `platform.frontend.image.tag`                | AIsolate UI image tag, used only with allowTags; empty: the chart's appVersion                                                                                                                                                                                                                                                                                                                        | `""`                                                                      |
+| `platform.frontend.image.digest`             | AIsolate UI image digest (sha256:…); required unless allowTags                                                                                                                                                                                                                                                                                                                                        | `""`                                                                      |
+| `platform.frontend.image.pullPolicy`         | AIsolate UI image pull policy                                                                                                                                                                                                                                                                                                                                                                         | `IfNotPresent`                                                            |
+| `platform.frontend.image.pullSecrets`        | AIsolate UI image pull Secret names                                                                                                                                                                                                                                                                                                                                                                   | `[]`                                                                      |
+| `platform.frontend.resources`                | AIsolate UI container resources (requests, limits)                                                                                                                                                                                                                                                                                                                                                    | `{}`                                                                      |
+| `platform.backend.host`                      | Backend host (headless=false): the AIsolate UI's API and the CLI's endpoint                                                                                                                                                                                                                                                                                                                           | `api.aisolate.example.com`                                                |
+| `platform.backend.image.registry`            | Backend image registry                                                                                                                                                                                                                                                                                                                                                                                | `""`                                                                      |
+| `platform.backend.image.repository`          | Backend image repository                                                                                                                                                                                                                                                                                                                                                                              | `aisolate/backend`                                                        |
+| `platform.backend.image.tag`                 | Backend image tag, used only with allowTags; empty: the chart's appVersion                                                                                                                                                                                                                                                                                                                            | `""`                                                                      |
+| `platform.backend.image.digest`              | Backend image digest (sha256:…); required unless allowTags                                                                                                                                                                                                                                                                                                                                            | `""`                                                                      |
+| `platform.backend.image.pullPolicy`          | Backend image pull policy                                                                                                                                                                                                                                                                                                                                                                             | `IfNotPresent`                                                            |
+| `platform.backend.image.pullSecrets`         | Backend image pull Secret names                                                                                                                                                                                                                                                                                                                                                                       | `[]`                                                                      |
+| `platform.backend.resources`                 | Backend container resources (requests, limits)                                                                                                                                                                                                                                                                                                                                                        | `{}`                                                                      |
+| `platform.backend.maxArtifactSize`           | Largest project artifact (a jar or a Python zip) a deploy may bring, as Spring reads a size (500MB, 2GB); empty: no limit. The pods fetch it from the backend at start                                                                                                                                                                                                                                | `""`                                                                      |
+
+### Persistence (headless=false)
+
+| Name                                        | Description                                                                                                                                                                                                                                                                                                 | Value                                                                     |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `persistence.postgres.image.registry`       | The backend's PostgreSQL image registry                                                                                                                                                                                                                                                                     | `""`                                                                      |
+| `persistence.postgres.image.repository`     | The backend's PostgreSQL image repository; its data lives on the PersistentVolumeClaim db (storage)                                                                                                                                                                                                         | `postgres`                                                                |
+| `persistence.postgres.image.tag`            | The backend's PostgreSQL image tag, used only with allowTags                                                                                                                                                                                                                                                | `18`                                                                      |
+| `persistence.postgres.image.digest`         | The backend's PostgreSQL image digest (sha256:…), the chart's pin of postgres:18; wins over the tag                                                                                                                                                                                                         | `sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336` |
+| `persistence.postgres.image.pullPolicy`     | The backend's PostgreSQL image pull policy                                                                                                                                                                                                                                                                  | `IfNotPresent`                                                            |
+| `persistence.postgres.image.pullSecrets`    | The backend's PostgreSQL image pull Secret names                                                                                                                                                                                                                                                            | `[]`                                                                      |
+| `persistence.postgres.resources`            | The backend's PostgreSQL container resources (requests, limits)                                                                                                                                                                                                                                             | `{}`                                                                      |
+| `persistence.postgres.existingSecret`       | A Secret you create with the database password under the key password; empty: the chart generates the Secret db and keeps it with lookup, which a render without a cluster (Argo CD, helm template | kubectl apply) cannot see, so every sync makes a new password the kept database refuses: set one there | `""`                                                                      |
+| `persistence.postgres.storage.size`         | The size of the PersistentVolumeClaim db the database keeps its data on (the spaces, the airlocks, the audit trail); helm uninstall deletes it                                                                                                                                                              | `8Gi`                                                                     |
+| `persistence.postgres.storage.storageClass` | Its StorageClass; empty: the cluster's default                                                                                                                                                                                                                                                              | `""`                                                                      |

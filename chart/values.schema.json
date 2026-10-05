@@ -1,0 +1,771 @@
+{
+    "title": "Chart Values",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "global": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+                "imageRegistry": {
+                    "type": "string",
+                    "description": "Registry of every image, the controller-rendered airlock and tool server pods included; wins over each image's registry",
+                    "default": ""
+                },
+                "imagePullSecrets": {
+                    "type": "array",
+                    "description": "Pull Secret names for the chart's own pods (the controller-rendered pods run as the namespace's default ServiceAccount: give it the Secret, see README)",
+                    "default": [],
+                    "items": {}
+                }
+            }
+        },
+        "common": {
+            "type": "object",
+            "description": "",
+            "additionalProperties": true,
+            "default": {}
+        },
+        "headless": {
+            "type": "boolean",
+            "description": "Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy. false adds the AIsolate UI (frontend, backend, the backend's database). A bool, never a string",
+            "default": true
+        },
+        "allowTags": {
+            "type": "boolean",
+            "description": "Let tag-only images render, for clusters that build their own images; off, every AIsolate image needs its digest",
+            "default": false
+        },
+        "extraDeploy": {
+            "type": "array",
+            "description": "Extra objects to deploy with the release (rendered as templates)",
+            "default": [],
+            "items": {}
+        },
+        "test": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "toolServers": {
+                    "type": "array",
+                    "description": "Tool server Services helm test must find unreachable (skipped while absent)",
+                    "default": [],
+                    "items": {}
+                },
+                "ingressService": {
+                    "type": "string",
+                    "description": "The ingress controller's Service in the platform.egress.ingressFrom namespace, which helm test calls the release through",
+                    "default": "ingress-nginx-controller"
+                },
+                "image": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "registry": {
+                            "type": "string",
+                            "description": "helm test's curl image registry",
+                            "default": ""
+                        },
+                        "repository": {
+                            "type": "string",
+                            "description": "helm test's curl image repository",
+                            "default": "curlimages/curl"
+                        },
+                        "tag": {
+                            "type": "string",
+                            "description": "helm test's curl image tag, used only with allowTags",
+                            "default": "8.14.1"
+                        },
+                        "digest": {
+                            "type": "string",
+                            "description": "helm test's curl image digest (sha256:…), the chart's pin of 8.14.1; wins over the tag",
+                            "default": "sha256:9a1ed35addb45476afa911696297f8e115993df459278ed036182dd2cd22b67b"
+                        },
+                        "pullPolicy": {
+                            "type": "string",
+                            "description": "helm test's curl image pull policy",
+                            "default": "IfNotPresent"
+                        },
+                        "pullSecrets": {
+                            "type": "array",
+                            "description": "helm test's curl image pull Secret names",
+                            "default": [],
+                            "items": {}
+                        }
+                    }
+                }
+            }
+        },
+        "platform": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "controller": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "Controller image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "Controller image repository",
+                                    "default": "aisolate/controller"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "Controller image tag, used only with allowTags; empty: the chart's appVersion",
+                                    "default": ""
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "Controller image digest (sha256:…); required unless allowTags",
+                                    "default": ""
+                                },
+                                "pullPolicy": {
+                                    "type": "string",
+                                    "description": "Controller image pull policy",
+                                    "default": "IfNotPresent"
+                                },
+                                "pullSecrets": {
+                                    "type": "array",
+                                    "description": "Controller image pull Secret names",
+                                    "default": [],
+                                    "items": {}
+                                }
+                            }
+                        },
+                        "replicas": {
+                            "type": "number",
+                            "description": "Controller replicas (leader-elected)",
+                            "default": 1
+                        },
+                        "resources": {
+                            "type": "object",
+                            "description": "Controller container resources (requests, limits), e.g. for a namespace ResourceQuota",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        }
+                    }
+                },
+                "airlock": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "Airlock image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "Airlock image repository: the core of every airlock pod the controller renders",
+                                    "default": "aisolate/airlock"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "Airlock image tag, used only with allowTags; empty: the chart's appVersion",
+                                    "default": ""
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "Airlock image digest (sha256:…); required unless allowTags",
+                                    "default": ""
+                                },
+                                "pullPolicy": {
+                                    "type": "string",
+                                    "description": "Pull policy of every pod the controller renders, airlock and tool server alike",
+                                    "default": "IfNotPresent"
+                                }
+                            }
+                        },
+                        "replicas": {
+                            "type": "number",
+                            "description": "Replicas of every airlock pod, and of the discovery pods (the airlock image with no documents) behind the aisolate Service",
+                            "default": 1
+                        },
+                        "runtimeClassName": {
+                            "type": "string",
+                            "description": "RuntimeClass of every pod the controller renders (airlock, MCP server, discovery); empty: the cluster's default",
+                            "default": ""
+                        },
+                        "corsAllowedOrigins": {
+                            "type": "string",
+                            "description": "Browser origins the airlock pods answer, e.g. the chat's",
+                            "default": ""
+                        },
+                        "resources": {
+                            "type": "object",
+                            "description": "Requests and limits of every airlock pod and discovery pod (cpu, memory, ephemeral-storage, which holds the airlock's fetched code in /tmp, at most 2Gi): one airlock's code or load must not starve its node",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        }
+                    }
+                },
+                "toolServer": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "Tool server image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "Tool server image repository: one pod per airlock, rendered by the controller",
+                                    "default": "aisolate/tool-server"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "Tool server image tag, used only with allowTags; empty: the chart's appVersion",
+                                    "default": ""
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "Tool server image digest (sha256:…); required unless allowTags",
+                                    "default": ""
+                                }
+                            }
+                        },
+                        "resources": {
+                            "type": "object",
+                            "description": "Requests and limits of every MCP server (cpu, memory, ephemeral-storage, which holds the fetched code in /tmp, at most 2Gi)",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        }
+                    }
+                },
+                "airlockPython": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "Python airlock image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "Python airlock image repository: the airlock pod of an airlock with Python code",
+                                    "default": "aisolate/airlock-python"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "Python airlock image tag, used only with allowTags; empty: the chart's appVersion",
+                                    "default": ""
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "Python airlock image digest (sha256:…); required unless allowTags",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    }
+                },
+                "toolServerPython": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "Python tool server image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "Python tool server image repository: the MCP server of an airlock with Python code",
+                                    "default": "aisolate/tool-server-python"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "Python tool server image tag, used only with allowTags; empty: the chart's appVersion",
+                                    "default": ""
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "Python tool server image digest (sha256:…); required unless allowTags",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    }
+                },
+                "ingress": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "className": {
+                            "type": "string",
+                            "description": "IngressClass of every Ingress, the chart's and the controller's",
+                            "default": "nginx"
+                        },
+                        "host": {
+                            "type": "string",
+                            "description": "The release's public host: discovery and every airlock's endpoint",
+                            "default": "aisolate.example.com"
+                        },
+                        "publicUrl": {
+                            "type": "string",
+                            "description": "The release's public URL; its scheme serves the AIsolate UI's hosts too",
+                            "default": "https://aisolate.example.com"
+                        },
+                        "tls": {
+                            "type": "boolean",
+                            "description": "Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too",
+                            "default": false
+                        },
+                        "annotations": {
+                            "type": "object",
+                            "description": "Annotations of every chart Ingress, over the chart's nginx ones, e.g. cert-manager.io/cluster-issuer",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        }
+                    }
+                },
+                "identity": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "issuerUri": {
+                            "type": "string",
+                            "description": "The identity provider: the issuer the pods and the backend validate tokens against",
+                            "default": "https://idp.example.com/realms/customer"
+                        },
+                        "jwkSetUri": {
+                            "type": "string",
+                            "description": "Where the pods and the backend fetch the provider's keys",
+                            "default": ""
+                        },
+                        "rolesClaim": {
+                            "type": "string",
+                            "description": "Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups)",
+                            "default": "realm_access.roles"
+                        },
+                        "egress": {
+                            "type": "object",
+                            "description": "The provider as a NetworkPolicy peer, when it runs in the cluster or at a private address: namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required); empty: the chart's Keycloak when it answers, else the backend reaches it over HTTPS at a public address",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        },
+                        "directory": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "url": {
+                                    "type": "string",
+                                    "description": "Keycloak's base URL (no /realms), on the provider's host so identity.egress covers it, e.g. https://idp.example.com; empty: no directory, users are typed e-mails",
+                                    "default": ""
+                                },
+                                "realm": {
+                                    "type": "string",
+                                    "description": "The realm whose users the AIsolate UI picks from",
+                                    "default": ""
+                                },
+                                "clientId": {
+                                    "type": "string",
+                                    "description": "A confidential client whose service account holds realm-management's view-users and query-users only",
+                                    "default": ""
+                                },
+                                "existingSecret": {
+                                    "type": "string",
+                                    "description": "The Secret with that client's secret under the key client-secret, in the release's namespace",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    }
+                },
+                "egress": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "dns": {
+                            "type": "object",
+                            "description": "The cluster DNS as a peer (default: kube-dns in kube-system, port 53): namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required)",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        },
+                        "ingressFrom": {
+                            "type": "object",
+                            "description": "The only pods that may reach an airlock pod (default: the ingress-nginx namespace): namespaceSelector, podSelector or cidr (/8 or longer, never with selectors)",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        },
+                        "apiServer": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "cidr": {
+                                    "type": "string",
+                                    "description": "The Kubernetes API server's address, the controller's and the backend's way to it, e.g. the kubernetes Endpoints' IP/32 (kubectl get endpoints kubernetes -n default); empty: any address on the ports, which the install's notes warn of (on Cilium an ipBlock does not match a node-hosted API server: leave it empty there)",
+                                    "default": ""
+                                },
+                                "ports": {
+                                    "type": "array",
+                                    "description": "The API server's ports as the pods' traffic reaches it after the Service: 443 on most managed clusters, 6443 on kubeadm, k3s and OpenShift, 8443 on minikube",
+                                    "default": "[]"
+                                }
+                            }
+                        },
+                        "hosts": {
+                            "type": "object",
+                            "description": "The hosts of every LLM and data source defined for all of AIsolate or by a space or an airlock, each with its NetworkPolicy peer: cidr (/8 or longer), or namespaceSelector and podSelector, never both, plus port (required); an airlock that resolves an unmapped host is Invalid, and a global entry with one is left out of every catalog; a host on platform.egress.proxy.domains needs no entry",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        },
+                        "proxy": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "domains": {
+                                    "type": "array",
+                                    "description": "Hostnames the CONNECT-only egress proxy may reach on port 443: exact names, *.example.com for its subdomains, .example.com for the name and its subdomains; the proxy renders when non-empty",
+                                    "default": [],
+                                    "items": {}
+                                },
+                                "image": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "registry": {
+                                            "type": "string",
+                                            "description": "Egress proxy (Envoy) image registry",
+                                            "default": ""
+                                        },
+                                        "repository": {
+                                            "type": "string",
+                                            "description": "Egress proxy image repository",
+                                            "default": "envoyproxy/envoy"
+                                        },
+                                        "tag": {
+                                            "type": "string",
+                                            "description": "Egress proxy image tag, used only with allowTags",
+                                            "default": "distroless-v1.39.4"
+                                        },
+                                        "digest": {
+                                            "type": "string",
+                                            "description": "Egress proxy image digest (sha256:…), the chart's pin of the tag; wins over it",
+                                            "default": "sha256:ccb37e93d8274a525fe00d67287716dbe3d58bc4237d7627af9e64fae0fd25c8"
+                                        },
+                                        "pullPolicy": {
+                                            "type": "string",
+                                            "description": "Egress proxy image pull policy",
+                                            "default": "IfNotPresent"
+                                        },
+                                        "pullSecrets": {
+                                            "type": "array",
+                                            "description": "Egress proxy image pull Secret names",
+                                            "default": [],
+                                            "items": {}
+                                        }
+                                    }
+                                },
+                                "resources": {
+                                    "type": "object",
+                                    "description": "Egress proxy container resources (requests, limits)",
+                                    "additionalProperties": true,
+                                    "default": "{}"
+                                }
+                            }
+                        }
+                    }
+                },
+                "observability": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "otlpEndpoint": {
+                            "type": "string",
+                            "description": "OTLP/HTTP base URL the airlock and tool server pods send their traces to, e.g. an OpenTelemetry Collector, http://otel-collector.monitoring.svc:4318 (the pods append /v1/traces); its host must be in platform.egress.hosts or proxied, or every space is Invalid; empty: no trace leaves the pods",
+                            "default": ""
+                        }
+                    }
+                },
+                "tracing": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "queryUrl": {
+                            "type": "string",
+                            "description": "The trace store's query API the backend reads, Jaeger's (http://jaeger.monitoring.svc:16686) or any store that answers GET /api/traces/{id} as Jaeger does; empty: the AIsolate UI has no Monitoring",
+                            "default": ""
+                        },
+                        "egress": {
+                            "type": "object",
+                            "description": "The trace store as the backend's NetworkPolicy peer, required with queryUrl: namespaceSelector and podSelector, or cidr, plus its query port",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        }
+                    }
+                },
+                "metrics": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "queryUrl": {
+                            "type": "string",
+                            "description": "The Prometheus HTTP API the backend reads, e.g. http://prometheus.monitoring.svc:9090, or any store that answers /api/v1/query and /api/v1/query_range alike; its series need the space label; empty: no Metrics tab",
+                            "default": ""
+                        },
+                        "egress": {
+                            "type": "object",
+                            "description": "Prometheus as the backend's NetworkPolicy peer, required with queryUrl: namespaceSelector and podSelector, or cidr, plus its port",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        }
+                    }
+                },
+                "audit": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "failClosed": {
+                            "type": "boolean",
+                            "description": "While an airlock pod's on-disk buffer of lines the backend has not taken is full, it refuses new questions with 503 \"audit unavailable\"; false: it answers and the line is lost from the backend's trail (stdout keeps it)",
+                            "default": true
+                        },
+                        "stdout": {
+                            "type": "boolean",
+                            "description": "Each audit line is also printed to the airlock pod's stdout, for a SIEM's log collector; headless keeps it on regardless",
+                            "default": true
+                        },
+                        "retentionMonths": {
+                            "type": "number",
+                            "description": "Months of audit lines the backend keeps (84: seven years); its daily job drops each older month whole",
+                            "default": 84
+                        },
+                        "existingSecret": {
+                            "type": "string",
+                            "description": "An existing Secret holding the audit ingest key under the key key; set: the chart creates no audit-ingest Secret and hashes none into the pod checksums, recommended for a render without cluster access (Argo CD, helm template), where lookup cannot keep the generated key; empty: the chart generates and keeps one",
+                            "default": ""
+                        }
+                    }
+                },
+                "credentials": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "existingSecret": {
+                            "type": "string",
+                            "description": "An existing Secret holding the key the backend seals typed API keys and passwords with, under the key key (32+ characters); set: the chart creates no credentials-key Secret and hashes none into the backend's checksum, recommended for a render without cluster access (Argo CD, helm template); empty: the chart generates and keeps one",
+                            "default": ""
+                        }
+                    }
+                },
+                "frontend": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "host": {
+                            "type": "string",
+                            "description": "AIsolate UI host (headless=false)",
+                            "default": "ui.aisolate.example.com"
+                        },
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "AIsolate UI image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "AIsolate UI image repository; the image carries the backend's URL and the identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)",
+                                    "default": "aisolate/ui"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "AIsolate UI image tag, used only with allowTags; empty: the chart's appVersion",
+                                    "default": ""
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "AIsolate UI image digest (sha256:…); required unless allowTags",
+                                    "default": ""
+                                },
+                                "pullPolicy": {
+                                    "type": "string",
+                                    "description": "AIsolate UI image pull policy",
+                                    "default": "IfNotPresent"
+                                },
+                                "pullSecrets": {
+                                    "type": "array",
+                                    "description": "AIsolate UI image pull Secret names",
+                                    "default": [],
+                                    "items": {}
+                                }
+                            }
+                        },
+                        "resources": {
+                            "type": "object",
+                            "description": "AIsolate UI container resources (requests, limits)",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        }
+                    }
+                },
+                "backend": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "host": {
+                            "type": "string",
+                            "description": "Backend host (headless=false): the AIsolate UI's API and the CLI's endpoint",
+                            "default": "api.aisolate.example.com"
+                        },
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "Backend image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "Backend image repository",
+                                    "default": "aisolate/backend"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "Backend image tag, used only with allowTags; empty: the chart's appVersion",
+                                    "default": ""
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "Backend image digest (sha256:…); required unless allowTags",
+                                    "default": ""
+                                },
+                                "pullPolicy": {
+                                    "type": "string",
+                                    "description": "Backend image pull policy",
+                                    "default": "IfNotPresent"
+                                },
+                                "pullSecrets": {
+                                    "type": "array",
+                                    "description": "Backend image pull Secret names",
+                                    "default": [],
+                                    "items": {}
+                                }
+                            }
+                        },
+                        "resources": {
+                            "type": "object",
+                            "description": "Backend container resources (requests, limits)",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        },
+                        "maxArtifactSize": {
+                            "type": "string",
+                            "description": "Largest project artifact (a jar or a Python zip) a deploy may bring, as Spring reads a size (500MB, 2GB); empty: no limit. The pods fetch it from the backend at start",
+                            "default": ""
+                        }
+                    }
+                }
+            }
+        },
+        "persistence": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "postgres": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "The backend's PostgreSQL image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "The backend's PostgreSQL image repository; its data lives on the PersistentVolumeClaim db (storage)",
+                                    "default": "postgres"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "The backend's PostgreSQL image tag, used only with allowTags",
+                                    "default": "18"
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "The backend's PostgreSQL image digest (sha256:…), the chart's pin of postgres:18; wins over the tag",
+                                    "default": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336"
+                                },
+                                "pullPolicy": {
+                                    "type": "string",
+                                    "description": "The backend's PostgreSQL image pull policy",
+                                    "default": "IfNotPresent"
+                                },
+                                "pullSecrets": {
+                                    "type": "array",
+                                    "description": "The backend's PostgreSQL image pull Secret names",
+                                    "default": [],
+                                    "items": {}
+                                }
+                            }
+                        },
+                        "resources": {
+                            "type": "object",
+                            "description": "The backend's PostgreSQL container resources (requests, limits)",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        },
+                        "existingSecret": {
+                            "type": "string",
+                            "description": "A Secret you create with the database password under the key password; empty: the chart generates the Secret db and keeps it with lookup, which a render without a cluster (Argo CD, helm template | kubectl apply) cannot see, so every sync makes a new password the kept database refuses: set one there",
+                            "default": ""
+                        },
+                        "storage": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "size": {
+                                    "type": "string",
+                                    "description": "The size of the PersistentVolumeClaim db the database keeps its data on (the spaces, the airlocks, the audit trail); helm uninstall deletes it",
+                                    "default": "8Gi"
+                                },
+                                "storageClass": {
+                                    "type": "string",
+                                    "description": "Its StorageClass; empty: the cluster's default",
+                                    "default": ""
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
