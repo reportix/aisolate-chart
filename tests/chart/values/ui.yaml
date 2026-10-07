@@ -1,0 +1,48 @@
+# The smallest install with the AIsolate UI: headless.yaml's images plus the UI's two, by digest.
+headless: false
+platform:
+  # The read-only directory the AIsolate UI's Add users searches.
+  identity:
+    directory:
+      url: https://idp.example.com
+      realm: customer
+      clientId: aisolate-directory
+      existingSecret: aisolate-directory
+  # Monitoring: the trace store's query API and its peer.
+  tracing:
+    queryUrl: http://jaeger.monitoring.svc:16686
+    egress:
+      namespaceSelector:
+        kubernetes.io/metadata.name: monitoring
+      podSelector:
+        app: jaeger
+      port: 16686
+  metrics:
+    queryUrl: http://prometheus.monitoring.svc:9090
+    egress:
+      namespaceSelector:
+        kubernetes.io/metadata.name: monitoring
+      podSelector:
+        app: prometheus
+      port: 9090
+  controller:
+    image:
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  airlock:
+    image:
+      digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  toolServer:
+    image:
+      digest: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+  airlockPython:
+    image:
+      digest: sha256:9999999999999999999999999999999999999999999999999999999999999999
+  toolServerPython:
+    image:
+      digest: sha256:8888888888888888888888888888888888888888888888888888888888888888
+  backend:
+    image:
+      digest: sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+  frontend:
+    image:
+      digest: sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee

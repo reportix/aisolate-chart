@@ -1,0 +1,27 @@
+# headless.yaml sending traces: the OTLP endpoint and its host's peer.
+platform:
+  controller:
+    image:
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  airlock:
+    image:
+      digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  toolServer:
+    image:
+      digest: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+  airlockPython:
+    image:
+      digest: sha256:9999999999999999999999999999999999999999999999999999999999999999
+  toolServerPython:
+    image:
+      digest: sha256:8888888888888888888888888888888888888888888888888888888888888888
+  observability:
+    otlpEndpoint: http://otel-collector.monitoring.svc:4318
+  egress:
+    hosts:
+      otel-collector.monitoring.svc:
+        namespaceSelector:
+          kubernetes.io/metadata.name: monitoring
+        podSelector:
+          app: otel-collector
+        port: 4318

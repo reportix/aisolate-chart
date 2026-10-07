@@ -1,0 +1,17 @@
+# The smallest production install: the five AIsolate images by digest, everything else default.
+platform:
+  controller:
+    image:
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  airlock:
+    image:
+      digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  toolServer:
+    image:
+      digest: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+  airlockPython:
+    image:
+      digest: sha256:9999999999999999999999999999999999999999999999999999999999999999
+  toolServerPython:
+    image:
+      digest: sha256:8888888888888888888888888888888888888888888888888888888888888888
