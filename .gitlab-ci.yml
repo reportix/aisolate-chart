@@ -1,0 +1,41 @@
+# Chart checks on every push; on a tag v<version>, the package in this project's Helm registry. Public images only.
+stages: [test, publish]
+
+.helm:
+  image: debian:bookworm-slim
+  variables:
+    # A version bump changes its checksum: helm's .sha256sum file, yq's checksums (SHA-256 column).
+    HELM_VERSION: v3.18.4
+    HELM_SHA256: f8180838c23d7c7d797b208861fecb591d9ce1690d8704ed1e4cb8e2add966c1
+    YQ_VERSION: v4.47.1
+    YQ_SHA256: 0fb28c6680193c41b364193d0c0fc4a03177aecde51cfc04d506b1517158c2fb
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends ca-certificates curl jq
+    - curl -fsSL -o /tmp/helm.tar.gz "https://get.helm.sh/helm-$HELM_VERSION-linux-amd64.tar.gz"
+    - echo "$HELM_SHA256  /tmp/helm.tar.gz" | sha256sum -c -
+    - tar -xzf /tmp/helm.tar.gz -C /usr/local/bin --strip-components=1 linux-amd64/helm
+    - curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/$YQ_VERSION/yq_linux_amd64"
+    - echo "$YQ_SHA256  /usr/local/bin/yq" | sha256sum -c -
+    - chmod +x /usr/local/bin/yq
+
+test_render:
+  extends: .helm
+  stage: test
+  script:
+    - ./tests/chart/test.sh
+  artifacts:
+    when: on_failure
+    paths:
+      - tests/chart/actual-results
+    expire_in: 1 week
+
+chart-publish:
+  extends: .helm
+  stage: publish
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    # The tag names Chart.yaml's version: v0.1.0 publishes aisolate-0.1.0.tgz to the stable channel.
+    - test "$(yq .version chart/Chart.yaml)" = "${CI_COMMIT_TAG#v}" || { echo "tag $CI_COMMIT_TAG is not Chart.yaml's version $(yq .version chart/Chart.yaml)" >&2; exit 1; }
+    - helm package chart
+    - curl --fail --request POST --user gitlab-ci-token:$CI_JOB_TOKEN --form "chart=@aisolate-${CI_COMMIT_TAG#v}.tgz" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"
