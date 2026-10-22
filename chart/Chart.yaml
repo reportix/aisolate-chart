@@ -4,7 +4,7 @@ description: >-
   AIsolate: governed model endpoints over the organisation's own databases. Installs the custom
   resource definitions (Space, Airlock), the controller that turns them into airlock
   pods and tool server pods, and the namespace policies; with headless=false also the AIsolate UI
-  and its plane.
+  and its plane; with platform.chat.enabled the AIsolate chat.
 type: application
 home: https://gitlab.reportix.com/aisolate/charts
 sources:

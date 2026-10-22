@@ -7,6 +7,9 @@ Backend         {{ include "aisolate.scheme" . }}://{{ .Values.platform.backend.
 Create the Secrets the export's secretRefs name (keys username and password), then apply the export,
 its code ConfigMaps included: kubectl apply -f <export> -n {{ .Release.Namespace }}
 {{- end }}
+{{- if .Values.platform.chat.enabled }}
+Chat            {{ include "aisolate.scheme" . }}://{{ .Values.platform.chat.host }}   (its origin belongs in platform.airlock.corsAllowedOrigins)
+{{- end }}
 Status: kubectl get spaces,airlocks -n {{ .Release.Namespace }}
 {{- if not .Values.platform.egress.apiServer.cidr }}
 

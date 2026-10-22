@@ -1,0 +1,29 @@
+{{- if .Values.platform.chat.enabled }}
+# Inside the namespace's default-deny: the browser reaches the chat through the ingress controller. The chat's one
+# server-side call registers it at the identity provider the release host names (RFC 7591): the release host and,
+# behind it, the provider, both fronted by the ingress controller, which is all the chat may reach besides the DNS.
+# ponytail: an identity provider the ingress controller does not front needs its own policy (extraDeploy).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chat
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: chat
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- include "aisolate.ingressControllerIngress" (dict "port" 3000 "context" $) | nindent 4 }}
+  egress:
+    {{- include "aisolate.dnsEgress" . | nindent 4 }}
+    - to:
+{{ include "aisolate.policyPeer" .Values.platform.egress.ingressFrom | indent 8 }}
+      ports:
+        - port: 80
+          protocol: TCP
+        - port: 443
+          protocol: TCP
+{{- end }}

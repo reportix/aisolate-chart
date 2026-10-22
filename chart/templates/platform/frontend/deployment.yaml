@@ -41,7 +41,7 @@ spec:
             {{- include "aisolate.containerSecurity" . | nindent 12 }}
           volumeMounts:
             - name: cache
-              mountPath: /app/frontend/.next/cache
+              mountPath: /app/apps/frontend/.next/cache
       volumes:
         - name: cache
           emptyDir: {}

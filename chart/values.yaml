@@ -77,7 +77,7 @@ platform:
     replicas: 1
     ## @param platform.airlock.runtimeClassName RuntimeClass of every pod the controller renders (airlock, MCP server, discovery); empty: the cluster's default
     runtimeClassName: ""
-    ## @param platform.airlock.corsAllowedOrigins Browser origins the airlock pods answer, e.g. the chat's
+    ## @param platform.airlock.corsAllowedOrigins Browser origins the airlock pods answer, e.g. the chat's (with platform.chat.enabled, the origin of platform.chat.host)
     corsAllowedOrigins: ""
     ## @param platform.airlock.resources [object] Requests and limits of every airlock pod and discovery pod (cpu, memory, ephemeral-storage, which holds the airlock's fetched code in /tmp, at most 2Gi): one airlock's code or load must not starve its node
     resources:
@@ -130,7 +130,7 @@ platform:
     host: aisolate.example.com
     ## @param platform.ingress.publicUrl The release's public URL; its scheme serves the AIsolate UI's hosts too
     publicUrl: https://aisolate.example.com
-    ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too
+    ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls, with the chat chat-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too
     tls: false
     ## @param platform.ingress.annotations [object] Annotations of every chart Ingress, over the chart's nginx ones, e.g. cert-manager.io/cluster-issuer
     annotations: {}
@@ -251,6 +251,31 @@ platform:
       pullSecrets: []
     ## @param platform.frontend.resources [object] AIsolate UI container resources (requests, limits)
     resources: {}
+
+  chat:
+    ## @param platform.chat.enabled Install the AIsolate chat, the sample client, on its own host, with or without the AIsolate UI
+    enabled: false
+    ## @param platform.chat.host The chat's host; add its origin to platform.airlock.corsAllowedOrigins
+    host: chat.aisolate.example.com
+    image:
+      ## @param platform.chat.image.registry Chat image registry
+      registry: ""
+      ## @param platform.chat.image.repository Chat image repository; the image carries the release's URL from its build (NEXT_PUBLIC_AISOLATE_URL, a build arg of its Dockerfile)
+      repository: aisolate/chat
+      ## @param platform.chat.image.tag Chat image tag, used only with allowTags; empty: the chart's appVersion
+      tag: ""
+      ## @param platform.chat.image.digest Chat image digest (sha256:…); required unless allowTags
+      digest: ""
+      ## @param platform.chat.image.pullPolicy Chat image pull policy
+      pullPolicy: IfNotPresent
+      ## @param platform.chat.image.pullSecrets Chat image pull Secret names
+      pullSecrets: []
+    ## @param platform.chat.replicas Chat replicas
+    replicas: 1
+    ## @param platform.chat.resources [object] Chat container resources (requests, limits)
+    resources: {}
+    ## @param platform.chat.hostAliases [array] Host entries of the chat pod (ip, hostnames), for a release host and identity provider the cluster's DNS does not resolve, as in the minikube demo
+    hostAliases: []
 
   backend:
     ## @param platform.backend.host Backend host (headless=false): the AIsolate UI's API and the CLI's endpoint

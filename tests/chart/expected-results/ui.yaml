@@ -668,7 +668,7 @@ spec:
               drop: ["ALL"]
           volumeMounts:
             - name: cache
-              mountPath: /app/frontend/.next/cache
+              mountPath: /app/apps/frontend/.next/cache
       volumes:
         - name: cache
           emptyDir: {}

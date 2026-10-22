@@ -1,0 +1,3 @@
+{{- if .Values.platform.chat.enabled }}
+{{ include "aisolate.ingress" (dict "name" "chat" "host" .Values.platform.chat.host "port" 3000 "context" $) }}
+{{- end }}

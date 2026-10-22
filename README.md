@@ -22,6 +22,7 @@ Python images, `platform.airlock`, `platform.toolServer`, `platform.airlockPytho
 `aisolate` Service and Ingress for discovery and `/.well-known/`, and, when `platform.egress.proxy.domains` is
 set, the CONNECT-only egress proxy. `headless=false` adds the AIsolate UI: its frontend, its backend and the
 backend's PostgreSQL, a database on a PersistentVolumeClaim that only the backend reaches.
+`platform.chat.enabled` adds the AIsolate chat, the sample client, on its own host.
 
 What the controller renders per airlock, how the two kinds of install differ and what the cluster, the identity
 provider, the databases and the model server must provide is the control plane's documentation:

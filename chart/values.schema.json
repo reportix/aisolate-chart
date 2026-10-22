@@ -201,7 +201,7 @@
                         },
                         "corsAllowedOrigins": {
                             "type": "string",
-                            "description": "Browser origins the airlock pods answer, e.g. the chat's",
+                            "description": "Browser origins the airlock pods answer, e.g. the chat's (with platform.chat.enabled, the origin of platform.chat.host)",
                             "default": ""
                         },
                         "resources": {
@@ -335,7 +335,7 @@
                         },
                         "tls": {
                             "type": "boolean",
-                            "description": "Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too",
+                            "description": "Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls, with the chat chat-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too",
                             "default": false
                         },
                         "annotations": {
@@ -627,6 +627,75 @@
                             "description": "AIsolate UI container resources (requests, limits)",
                             "additionalProperties": true,
                             "default": "{}"
+                        }
+                    }
+                },
+                "chat": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Install the AIsolate chat, the sample client, on its own host, with or without the AIsolate UI",
+                            "default": false
+                        },
+                        "host": {
+                            "type": "string",
+                            "description": "The chat's host; add its origin to platform.airlock.corsAllowedOrigins",
+                            "default": "chat.aisolate.example.com"
+                        },
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "Chat image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "Chat image repository; the image carries the release's URL from its build (NEXT_PUBLIC_AISOLATE_URL, a build arg of its Dockerfile)",
+                                    "default": "aisolate/chat"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "Chat image tag, used only with allowTags; empty: the chart's appVersion",
+                                    "default": ""
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "Chat image digest (sha256:…); required unless allowTags",
+                                    "default": ""
+                                },
+                                "pullPolicy": {
+                                    "type": "string",
+                                    "description": "Chat image pull policy",
+                                    "default": "IfNotPresent"
+                                },
+                                "pullSecrets": {
+                                    "type": "array",
+                                    "description": "Chat image pull Secret names",
+                                    "default": [],
+                                    "items": {}
+                                }
+                            }
+                        },
+                        "replicas": {
+                            "type": "number",
+                            "description": "Chat replicas",
+                            "default": 1
+                        },
+                        "resources": {
+                            "type": "object",
+                            "description": "Chat container resources (requests, limits)",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        },
+                        "hostAliases": {
+                            "type": "array",
+                            "description": "Host entries of the chat pod (ip, hostnames), for a release host and identity provider the cluster's DNS does not resolve, as in the minikube demo",
+                            "default": "[]"
                         }
                     }
                 },

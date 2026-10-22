@@ -21,6 +21,7 @@ the render.
     .Values.platform.controller.image
     .Values.platform.egress.proxy.image
     .Values.platform.frontend.image
+    .Values.platform.chat.image
     .Values.platform.backend.image
     .Values.persistence.postgres.image
     .Values.test.image
