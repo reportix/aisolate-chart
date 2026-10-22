@@ -83,20 +83,6 @@ spec:
             - name: AISOLATE_METRICS_QUERY_URL
               value: {{ . | quote }}
             {{- end }}
-            {{- if .Values.platform.identity.directory.url }}
-            # The company's people, read-only: the AIsolate UI's Add users.
-            - name: AISOLATE_DIRECTORY_URL
-              value: {{ .Values.platform.identity.directory.url | quote }}
-            - name: AISOLATE_DIRECTORY_REALM
-              value: {{ required "platform.identity.directory.realm: required with directory.url" .Values.platform.identity.directory.realm | quote }}
-            - name: AISOLATE_DIRECTORY_CLIENT_ID
-              value: {{ required "platform.identity.directory.clientId: required with directory.url" .Values.platform.identity.directory.clientId | quote }}
-            - name: AISOLATE_DIRECTORY_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ required "platform.identity.directory.existingSecret: required with directory.url" .Values.platform.identity.directory.existingSecret }}
-                  key: client-secret
-            {{- end }}
           ports:
             - name: http
               containerPort: 8080

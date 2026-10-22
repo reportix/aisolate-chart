@@ -234,14 +234,6 @@ max_env() { yq -N 'select(.kind == "Deployment" and .metadata.name == "backend")
 [ -z "$(echo "$ui" | max_env)" ] || fail "the backend limits artifacts by default: $(echo "$ui" | max_env)"
 [ "$(render_with --values "$values/ui.yaml" --set platform.backend.maxArtifactSize=500MB | max_env)" = 500MB ] || fail "platform.backend.maxArtifactSize does not reach the backend"
 
-echo "headless=false: the directory's client secret comes from its Secret; without a URL the backend has no directory"
-dir_env() { yq -N -o json -I0 'select(.kind == "Deployment" and .metadata.name == "backend") | .spec.template.spec.containers[0].env[] | select(.name | test("^AISOLATE_DIRECTORY_"))'; }
-[ "$(echo "$ui" | dir_env | jq -r 'select(.name == "AISOLATE_DIRECTORY_CLIENT_SECRET") | .valueFrom.secretKeyRef.name + "/" + .valueFrom.secretKeyRef.key + " " + (.value // "")')" = "aisolate-directory/client-secret " ] \
-  || fail "the backend does not read the directory's client secret from aisolate-directory/client-secret alone"
-[ -z "$(render_with --values "$values/ui.yaml" --set platform.identity.directory.url= | dir_env)" ] || fail "an empty directory.url still configures a directory"
-err=$(render_with --values "$values/ui.yaml" --set platform.identity.directory.realm= 2>&1 >/dev/null) && fail "a directory.url without its realm rendered"
-echo "$err" | grep -q "directory.realm" || fail "a directory.url without its realm failed, but not on the realm: $err"
-
 echo "headless=false: the backend reads the trace store only when one is named, through its peer on its port alone"
 trace_env() { yq -N 'select(.kind == "Deployment" and .metadata.name == "backend") | .spec.template.spec.containers[0].env[] | select(.name == "AISOLATE_TRACING_QUERY_URL") | .value'; }
 trace_rule() { yq -N -o json -I0 'select(.kind == "NetworkPolicy" and .metadata.name == "backend") | .spec.egress[] | select(.ports[0].port == 16686)'; }

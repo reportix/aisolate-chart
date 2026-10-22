@@ -44,7 +44,7 @@ spec:
                     items:
                       type: "string"
                     type: "array"
-                  users:
+                  roles:
                     items:
                       type: "string"
                     type: "array"

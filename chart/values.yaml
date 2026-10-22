@@ -144,19 +144,7 @@ platform:
     rolesClaim: realm_access.roles
     ## @param platform.identity.egress [object] The provider as a NetworkPolicy peer, when it runs in the cluster or at a private address: namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required); empty: the chart's Keycloak when it answers, else the backend reaches it over HTTPS at a public address
     egress: {}
-    # The company's people, read-only, for the AIsolate UI's Add users (headless=false): the backend searches them and
-    # refuses to add an e-mail nobody signs in with. AIsolate never creates, invites or deletes anyone; admission still
-    # reads the spaces' and airlocks' e-mail lists alone. Keycloak's admin API, reached through identity.egress.
-    directory:
-      ## @param platform.identity.directory.url Keycloak's base URL (no /realms), on the provider's host so identity.egress covers it, e.g. https://idp.example.com; empty: no directory, users are typed e-mails
-      url: ""
-      ## @param platform.identity.directory.realm The realm whose users the AIsolate UI picks from
-      realm: ""
-      ## @param platform.identity.directory.clientId A confidential client whose service account holds realm-management's view-users and query-users only
-      clientId: ""
-      ## @param platform.identity.directory.existingSecret The Secret with that client's secret under the key client-secret, in the release's namespace
-      existingSecret: ""
-
+    # Admission reads the roles claim; the UI's developers are typed e-mails.
   egress:
     ## @param platform.egress.dns [object] The cluster DNS as a peer (default: kube-dns in kube-system, port 53): namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required)
     dns:

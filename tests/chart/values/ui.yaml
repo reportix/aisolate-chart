@@ -1,13 +1,6 @@
 # The smallest install with the AIsolate UI: headless.yaml's images plus the UI's two, by digest.
 headless: false
 platform:
-  # The read-only directory the AIsolate UI's Add users searches.
-  identity:
-    directory:
-      url: https://idp.example.com
-      realm: customer
-      clientId: aisolate-directory
-      existingSecret: aisolate-directory
   # Monitoring: the trace store's query API and its peer.
   tracing:
     queryUrl: http://jaeger.monitoring.svc:16686

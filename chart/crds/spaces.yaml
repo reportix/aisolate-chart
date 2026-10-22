@@ -28,7 +28,7 @@ spec:
             properties:
               access:
                 properties:
-                  users:
+                  roles:
                     items:
                       type: "string"
                     type: "array"

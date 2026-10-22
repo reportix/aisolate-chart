@@ -504,17 +504,6 @@ spec:
               value: "http://jaeger.monitoring.svc:16686"
             - name: AISOLATE_METRICS_QUERY_URL
               value: "http://prometheus.monitoring.svc:9090"
-            - name: AISOLATE_DIRECTORY_URL
-              value: "https://idp.example.com"
-            - name: AISOLATE_DIRECTORY_REALM
-              value: "customer"
-            - name: AISOLATE_DIRECTORY_CLIENT_ID
-              value: "aisolate-directory"
-            - name: AISOLATE_DIRECTORY_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: aisolate-directory
-                  key: client-secret
           ports:
             - name: http
               containerPort: 8080
