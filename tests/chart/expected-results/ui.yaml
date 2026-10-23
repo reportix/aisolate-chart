@@ -475,7 +475,7 @@ spec:
                   name: db
                   key: password
             - name: AISOLATE_ISSUER_URI
-              value: "https://idp.example.com/realms/customer"
+              value: "https://idp-ops.example.com/realms/aisolate"
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI
               value: ""
             - name: AISOLATE_ROLES_CLAIM
@@ -694,7 +694,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: backend
+                name: aisolate
                 port:
                   number: 8080
 ---

@@ -1,6 +1,10 @@
 # The smallest install with the AIsolate UI: headless.yaml's images plus the UI's two, by digest.
 headless: false
 platform:
+  # AIsolate's own provider for the dashboard and the CLI; the users' stays the default.
+  identity:
+    operators:
+      issuerUri: https://idp-ops.example.com/realms/aisolate
   # Monitoring: the trace store's query API and its peer.
   tracing:
     queryUrl: http://jaeger.monitoring.svc:16686

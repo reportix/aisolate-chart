@@ -29,11 +29,11 @@ spec:
                 name: aisolate
                 port:
                   number: 8080
-          # With the AIsolate UI the backend serves it, the same document, there before any airlock pod
+          # The pods serve the release host's discovery in both modes; the dashboard's and the CLI's provider is the backend's own
           - path: /.well-known/
             pathType: Prefix
             backend:
               service:
-                name: {{ if .Values.headless }}aisolate{{ else }}backend{{ end }}
+                name: aisolate
                 port:
                   number: 8080

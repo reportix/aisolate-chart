@@ -136,14 +136,23 @@ platform:
     annotations: {}
 
   identity:
-    ## @param platform.identity.issuerUri The identity provider: the issuer the pods and the backend validate tokens against
+    ## @param platform.identity.issuerUri The application users' identity provider: the issuer the pods validate tokens against; the backend too unless operators.issuerUri is set
     issuerUri: https://idp.example.com/realms/customer
-    ## @param platform.identity.jwkSetUri Where the pods and the backend fetch the provider's keys
+    ## @param platform.identity.jwkSetUri Where the pods fetch the provider's keys; the backend too unless operators.issuerUri is set
     jwkSetUri: ""
-    ## @param platform.identity.rolesClaim Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups)
+    ## @param platform.identity.rolesClaim Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups); the pods read it, the backend too unless operators.rolesClaim is set
     rolesClaim: realm_access.roles
     ## @param platform.identity.egress [object] The provider as a NetworkPolicy peer, when it runs in the cluster or at a private address: namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required); empty: the chart's Keycloak when it answers, else the backend reaches it over HTTPS at a public address
     egress: {}
+    operators:
+      ## @param platform.identity.operators.issuerUri AIsolate's own identity provider for the dashboard and the CLI; empty: the one above
+      issuerUri: ""
+      ## @param platform.identity.operators.jwkSetUri Where the backend fetches that provider's keys; empty: discovered from the operators' issuer; the one above is used only when the issuer is shared
+      jwkSetUri: ""
+      ## @param platform.identity.operators.rolesClaim Dot path of the roles claim in that provider's tokens; empty: the one above
+      rolesClaim: ""
+      ## @param platform.identity.operators.egress [object] That provider as a NetworkPolicy peer (same keys as platform.identity.egress); empty: the one above
+      egress: {}
     # Admission reads the roles claim; the UI's developers are typed e-mails.
   egress:
     ## @param platform.egress.dns [object] The cluster DNS as a peer (default: kube-dns in kube-system, port 53): namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required)
@@ -227,7 +236,7 @@ platform:
     image:
       ## @param platform.frontend.image.registry AIsolate UI image registry
       registry: ""
-      ## @param platform.frontend.image.repository AIsolate UI image repository; the image carries the backend's URL and the identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)
+      ## @param platform.frontend.image.repository AIsolate UI image repository; the image carries the backend's URL and the operators' identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)
       repository: aisolate/ui
       ## @param platform.frontend.image.tag AIsolate UI image tag, used only with allowTags; empty: the chart's appVersion
       tag: ""

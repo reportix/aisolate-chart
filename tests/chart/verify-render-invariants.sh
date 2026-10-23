@@ -96,9 +96,19 @@ echo "headless=false: the database keeps its data on the PersistentVolumeClaim d
 [ "$(echo "$ui" | yq -N 'select(.kind == "PersistentVolumeClaim" and .metadata.name == "db") | .spec.storageClassName == null')" = true ] || fail "an empty storageClass names a class instead of leaving the cluster's default"
 [ "$(render_with --values "$values/ui.yaml" --set persistence.postgres.storage.storageClass=fast | yq -N 'select(.kind == "PersistentVolumeClaim") | .spec.storageClassName')" = fast ] || fail "persistence.postgres.storage.storageClass does not reach the claim"
 
-echo "headless=false: the release host's identity metadata comes from the backend, so a chat signs in before any airlock pod"
-echo "$ui" | yq -N 'select(.kind == "Ingress" and .metadata.name == "aisolate") | .spec.rules[].http.paths[] | select(.path == "/.well-known/") | .backend.service.name' | grep -x backend >/dev/null || fail "headless=false does not send the release host's /.well-known/ to the backend: no pod, no sign-in"
-echo "$prod" | yq -N 'select(.kind == "Ingress" and .metadata.name == "aisolate") | .spec.rules[].http.paths[] | select(.path == "/.well-known/") | .backend.service.name' | grep -x aisolate >/dev/null || fail "headless lost the release host's /.well-known/ route to the pods"
+echo "the release host's /.well-known/ is the pods' in both modes; the backend validates the operators' issuer when set, else the users'"
+for doc in "$prod" "$ui"; do
+  echo "$doc" | yq -N 'select(.kind == "Ingress" and .metadata.name == "aisolate") | .spec.rules[].http.paths[] | select(.path == "/.well-known/") | .backend.service.name' | grep -x aisolate >/dev/null || fail "the release host's /.well-known/ does not go to the pods"
+done
+issuer() { echo "$1" | yq -N 'select(.kind == "Deployment" and .metadata.name == "backend") | .spec.template.spec.containers[].env[]? | select(.name == "AISOLATE_ISSUER_URI") | .value'; }
+[ "$(issuer "$ui")" = https://idp-ops.example.com/realms/aisolate ] || fail "the backend does not validate the operators' issuer"
+[ "$(issuer "$(render_with --values "$values/ui.yaml" --set platform.identity.operators.issuerUri=)")" = https://idp.example.com/realms/customer ] || fail "without operators the backend does not validate the users' issuer"
+jwks() { echo "$1" | yq -N 'select(.kind == "Deployment" and .metadata.name == "backend") | .spec.template.spec.containers[].env[]? | select(.name == "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI") | .value'; }
+users_jwks=https://idp.example.com/realms/customer/protocol/openid-connect/certs
+[ -z "$(jwks "$(render_with --values "$values/ui.yaml" --set platform.identity.jwkSetUri=$users_jwks)")" ] || fail "with the operators' own issuer the backend takes the users' JWKS"
+[ "$(jwks "$(render_with --values "$values/ui.yaml" --set platform.identity.operators.issuerUri= --set platform.identity.jwkSetUri=$users_jwks)")" = $users_jwks ] || fail "with a shared issuer the backend does not take its JWKS"
+err=$(render_with --values "$values/ui.yaml" --set platform.identity.operators.egress.cidr=10.0.0.1/32 2>&1 >/dev/null) && fail "the chart rendered the operators' egress without a port"
+echo "$err" | grep -q "platform.identity.operators.egress.port is required" || fail "the render failed, but not on the operators' egress port: $err"
 
 echo "discovery reaches the discovery pods; an airlock's chat path is longer and wins"
 for doc in "$prod" "$ui" "$chat"; do

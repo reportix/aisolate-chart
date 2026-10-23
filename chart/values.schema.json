@@ -352,17 +352,17 @@
                     "properties": {
                         "issuerUri": {
                             "type": "string",
-                            "description": "The identity provider: the issuer the pods and the backend validate tokens against",
+                            "description": "The application users' identity provider: the issuer the pods validate tokens against; the backend too unless operators.issuerUri is set",
                             "default": "https://idp.example.com/realms/customer"
                         },
                         "jwkSetUri": {
                             "type": "string",
-                            "description": "Where the pods and the backend fetch the provider's keys",
+                            "description": "Where the pods fetch the provider's keys; the backend too unless operators.issuerUri is set",
                             "default": ""
                         },
                         "rolesClaim": {
                             "type": "string",
-                            "description": "Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups)",
+                            "description": "Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups); the pods read it, the backend too unless operators.rolesClaim is set",
                             "default": "realm_access.roles"
                         },
                         "egress": {
@@ -370,6 +370,33 @@
                             "description": "The provider as a NetworkPolicy peer, when it runs in the cluster or at a private address: namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required); empty: the chart's Keycloak when it answers, else the backend reaches it over HTTPS at a public address",
                             "additionalProperties": true,
                             "default": "{}"
+                        },
+                        "operators": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "issuerUri": {
+                                    "type": "string",
+                                    "description": "AIsolate's own identity provider for the dashboard and the CLI; empty: the one above",
+                                    "default": ""
+                                },
+                                "jwkSetUri": {
+                                    "type": "string",
+                                    "description": "Where the backend fetches that provider's keys; empty: discovered from the operators' issuer; the one above is used only when the issuer is shared",
+                                    "default": ""
+                                },
+                                "rolesClaim": {
+                                    "type": "string",
+                                    "description": "Dot path of the roles claim in that provider's tokens; empty: the one above",
+                                    "default": ""
+                                },
+                                "egress": {
+                                    "type": "object",
+                                    "description": "That provider as a NetworkPolicy peer (same keys as platform.identity.egress); empty: the one above",
+                                    "additionalProperties": true,
+                                    "default": "{}"
+                                }
+                            }
                         }
                     }
                 },
@@ -570,7 +597,7 @@
                                 },
                                 "repository": {
                                     "type": "string",
-                                    "description": "AIsolate UI image repository; the image carries the backend's URL and the identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)",
+                                    "description": "AIsolate UI image repository; the image carries the backend's URL and the operators' identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)",
                                     "default": "aisolate/ui"
                                 },
                                 "tag": {
