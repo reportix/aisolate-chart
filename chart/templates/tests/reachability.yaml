@@ -25,6 +25,7 @@ metadata:
   labels: {aisolate.dev/role: test}
   annotations: {"helm.sh/hook": test, "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"}
 spec:
+  {{- include "aisolate.scheduling" . | nindent 2 }}
   restartPolicy: Never
   automountServiceAccountToken: false
   {{- include "aisolate.imagePullSecrets" . | nindent 2 }}

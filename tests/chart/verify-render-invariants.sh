@@ -324,4 +324,16 @@ own=$(render_with --values "$values/keycloak.yaml" --set platform.keycloak.exist
 echo "$own" | yq -N 'select(.kind == "Secret" and .metadata.name == "keycloak") | .metadata.name' | grep . && fail "platform.keycloak.existingSecret still generates the Secret keycloak"
 [ "$(echo "$own" | yq -N 'select(.kind == "Deployment" and .metadata.name == "keycloak") | .spec.template.spec.containers[0].env[] | select(.name == "KC_BOOTSTRAP_ADMIN_PASSWORD") | .valueFrom.secretKeyRef.name')" = my-keycloak ] || fail "the admin password does not come from platform.keycloak.existingSecret"
 
+echo "platform.scheduling: node selector and tolerations on every pod of the release and in the controller's settings; none by default"
+placement() { yq -N -o json -I0 "select(.kind == \"$1\") | {\"n\": .spec${2-.template.spec}.nodeSelector, \"t\": .spec${2-.template.spec}.tolerations}" | jq -S -c '[.n, .t]' | sort -u; }
+settings_scheduling() { yq -N 'select(.kind == "Deployment" and .metadata.name == "aisolate-controller") | .spec.template.metadata.annotations["aisolate.dev/settings"]' | yq -N -o json -I0 '.aisolate.controller.scheduling | [.nodeSelector, .tolerations]' | jq -S -c .; }
+[ "$(echo "$kc" | placement Deployment)" = "[null,null]" ] && [ "$(echo "$kc" | settings_scheduling)" = "[{},[]]" ] || fail "a pod or the settings carry a placement nobody set: $(echo "$kc" | placement Deployment) $(echo "$kc" | settings_scheduling)"
+placed=$(render_with --values "$values/keycloak.yaml" --set 'platform.egress.proxy.domains[0]=idp.example.com' --set platform.egress.proxy.image.digest=sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd \
+  --set-json 'platform.scheduling={"nodeSelector":{"pool":"robot"},"tolerations":[{"key":"pool","operator":"Equal","value":"robot","effect":"NoSchedule"}]}')
+want='[{"pool":"robot"},[{"effect":"NoSchedule","key":"pool","operator":"Equal","value":"robot"}]]'
+[ "$(echo "$placed" | count Deployment)" = 7 ] || fail "the placement render has $(echo "$placed" | count Deployment) Deployments, expected 7"
+[ "$(echo "$placed" | placement Deployment)" = "$want" ] || fail "a Deployment misses the placement: $(echo "$placed" | yq -N -o json -I0 'select(.kind == "Deployment") | [.metadata.name, .spec.template.spec.nodeSelector]')"
+[ "$(echo "$placed" | placement Pod '')" = "$want" ] || fail "the helm test pod misses the placement: $(echo "$placed" | placement Pod '')"
+[ "$(echo "$placed" | settings_scheduling)" = "$want" ] || fail "the controller's settings do not carry the placement for the pods it renders: $(echo "$placed" | settings_scheduling)"
+
 echo "render checks passed"

@@ -22,6 +22,7 @@ spec:
         {{- include "aisolate.auditIngestKeyChecksum" . | nindent 8 }}
         {{- include "aisolate.credentialsKeyChecksum" . | nindent 8 }}
     spec:
+      {{- include "aisolate.scheduling" . | nindent 6 }}
       serviceAccountName: backend
       {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
       securityContext:

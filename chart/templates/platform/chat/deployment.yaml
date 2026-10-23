@@ -18,6 +18,7 @@ spec:
       labels:
         app: chat
     spec:
+      {{- include "aisolate.scheduling" . | nindent 6 }}
       automountServiceAccountToken: false
       {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
       {{- with .Values.platform.chat.hostAliases }}

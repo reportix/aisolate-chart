@@ -16,6 +16,7 @@ spec:
       labels:
         app: ui
     spec:
+      {{- include "aisolate.scheduling" . | nindent 6 }}
       automountServiceAccountToken: false
       {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
       securityContext:

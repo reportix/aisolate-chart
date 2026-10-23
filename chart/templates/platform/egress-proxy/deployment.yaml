@@ -18,6 +18,7 @@ spec:
       annotations:
         aisolate.dev/envoy-yaml: {{ printf "%s\n" (include "aisolate.envoyYaml" .) | quote }}
     spec:
+      {{- include "aisolate.scheduling" . | nindent 6 }}
       automountServiceAccountToken: false
       {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
       securityContext:

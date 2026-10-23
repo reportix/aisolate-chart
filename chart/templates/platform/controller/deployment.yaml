@@ -23,6 +23,7 @@ spec:
         {{- include "aisolate.auditIngestKeyChecksum" . | nindent 8 }}
         {{- end }}
     spec:
+      {{- include "aisolate.scheduling" . | nindent 6 }}
       serviceAccountName: aisolate-controller
       {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
       securityContext:

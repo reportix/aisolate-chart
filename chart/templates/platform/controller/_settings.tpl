@@ -46,6 +46,9 @@ aisolate:
     airlockPods:
       replicas: {{ .Values.platform.airlock.replicas }}
       runtimeClassName: {{ .Values.platform.airlock.runtimeClassName | quote }}
+    scheduling:
+      nodeSelector: {{ toJson .Values.platform.scheduling.nodeSelector }}
+      tolerations: {{ toJson .Values.platform.scheduling.tolerations }}
     corsAllowedOrigins: {{ .Values.platform.airlock.corsAllowedOrigins | quote }}
     observability:
       otlpEndpoint: {{ .Values.platform.observability.otlpEndpoint | quote }}

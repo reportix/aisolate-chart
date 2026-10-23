@@ -314,6 +314,23 @@
                         }
                     }
                 },
+                "scheduling": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "nodeSelector": {
+                            "type": "object",
+                            "description": "Node labels every pod of the release must match: the chart's Deployments, the helm test and the pods the controller renders alike, e.g. {pool: aisolate} for a dedicated node pool",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        },
+                        "tolerations": {
+                            "type": "array",
+                            "description": "Tolerations of every pod of the release, likewise: a dedicated pool's taint, e.g. [{key: pool, operator: Equal, value: aisolate, effect: NoSchedule}]",
+                            "default": "[]"
+                        }
+                    }
+                },
                 "ingress": {
                     "type": "object",
                     "additionalProperties": false,

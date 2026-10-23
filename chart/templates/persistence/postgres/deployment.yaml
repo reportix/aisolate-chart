@@ -21,6 +21,7 @@ spec:
       annotations:
         {{- include "aisolate.dbPasswordChecksum" . | nindent 8 }}
     spec:
+      {{- include "aisolate.scheduling" . | nindent 6 }}
       automountServiceAccountToken: false
       {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
       securityContext:

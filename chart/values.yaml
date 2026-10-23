@@ -123,6 +123,12 @@ platform:
       ## @param platform.toolServerPython.image.digest Python tool server image digest (sha256:…); required unless allowTags
       digest: ""
 
+  scheduling:
+    ## @param platform.scheduling.nodeSelector [object] Node labels every pod of the release must match: the chart's Deployments, the helm test and the pods the controller renders alike, e.g. {pool: aisolate} for a dedicated node pool
+    nodeSelector: {}
+    ## @param platform.scheduling.tolerations [array] Tolerations of every pod of the release, likewise: a dedicated pool's taint, e.g. [{key: pool, operator: Equal, value: aisolate, effect: NoSchedule}]
+    tolerations: []
+
   ingress:
     ## @param platform.ingress.className IngressClass of every Ingress, the chart's and the controller's
     className: nginx

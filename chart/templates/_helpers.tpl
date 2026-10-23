@@ -295,3 +295,16 @@ spec:
                 port:
                   number: {{ .port }}
 {{- end -}}
+
+{{/* Where every pod of the release runs (platform.scheduling): the chart's Deployments and the helm test take it here,
+     the controller the same from its settings for the pods it renders. */}}
+{{- define "aisolate.scheduling" -}}
+{{- with .Values.platform.scheduling.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.platform.scheduling.tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end -}}
