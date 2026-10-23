@@ -41,10 +41,10 @@ spec:
                   name: {{ .Values.persistence.postgres.existingSecret | default "db" }}
                   key: password
             - name: AISOLATE_ISSUER_URI
-              value: {{ .Values.platform.identity.operators.issuerUri | default .Values.platform.identity.issuerUri | quote }}
+              value: {{ include "aisolate.identity.operators.issuerUri" . | default (include "aisolate.identity.issuerUri" .) | quote }}
             - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI
               {{- /* The shared provider's keys only when the issuer is shared: never the other realm's. */}}
-              value: {{ ternary .Values.platform.identity.operators.jwkSetUri .Values.platform.identity.jwkSetUri (not (empty .Values.platform.identity.operators.issuerUri)) | quote }}
+              value: {{ include "aisolate.identity.operators.jwkSetUri" . | quote }}
             - name: AISOLATE_ROLES_CLAIM
               value: {{ .Values.platform.identity.operators.rolesClaim | default .Values.platform.identity.rolesClaim | quote }}
             # The release's host: every endpoint the AIsolate UI shows and the CLI prints is the pod's.

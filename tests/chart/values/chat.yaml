@@ -1,6 +1,8 @@
 # Headless plus the sample chat on its own host: headless.yaml's images and the chat's, by digest; the chat is
 # independent of headless.
 platform:
+  identity:
+    issuerUri: https://idp.example.com/realms/customer
   chat:
     enabled: true
     host: chat.example.com

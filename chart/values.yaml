@@ -130,22 +130,22 @@ platform:
     host: aisolate.example.com
     ## @param platform.ingress.publicUrl The release's public URL; its scheme serves the AIsolate UI's hosts too
     publicUrl: https://aisolate.example.com
-    ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls, with the chat chat-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too
+    ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls, with the chat chat-tls, with the chart's Keycloak keycloak-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too
     tls: false
     ## @param platform.ingress.annotations [object] Annotations of every chart Ingress, over the chart's nginx ones, e.g. cert-manager.io/cluster-issuer
     annotations: {}
 
   identity:
-    ## @param platform.identity.issuerUri The application users' identity provider: the issuer the pods validate tokens against; the backend too unless operators.issuerUri is set
-    issuerUri: https://idp.example.com/realms/customer
-    ## @param platform.identity.jwkSetUri Where the pods fetch the provider's keys; the backend too unless operators.issuerUri is set
+    ## @param platform.identity.issuerUri The application users' identity provider: the issuer the pods validate tokens against; the backend too unless operators.issuerUri is set; empty: the users realm of the chart's Keycloak (platform.keycloak.enabled), else required
+    issuerUri: ""
+    ## @param platform.identity.jwkSetUri Where the pods fetch the provider's keys; the backend too unless operators.issuerUri is set; empty with the chart's Keycloak: its in-cluster Service
     jwkSetUri: ""
     ## @param platform.identity.rolesClaim Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups); the pods read it, the backend too unless operators.rolesClaim is set
     rolesClaim: realm_access.roles
     ## @param platform.identity.egress [object] The provider as a NetworkPolicy peer, when it runs in the cluster or at a private address: namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required); empty: the chart's Keycloak when it answers, else the backend reaches it over HTTPS at a public address
     egress: {}
     operators:
-      ## @param platform.identity.operators.issuerUri AIsolate's own identity provider for the dashboard and the CLI; empty: the one above
+      ## @param platform.identity.operators.issuerUri AIsolate's own identity provider for the dashboard and the CLI; empty: the operators realm of the chart's Keycloak (platform.keycloak.enabled), else the one above
       issuerUri: ""
       ## @param platform.identity.operators.jwkSetUri Where the backend fetches that provider's keys; empty: discovered from the operators' issuer; the one above is used only when the issuer is shared
       jwkSetUri: ""
@@ -273,6 +273,43 @@ platform:
     resources: {}
     ## @param platform.chat.hostAliases [array] Host entries of the chat pod (ip, hostnames), for a release host and identity provider the cluster's DNS does not resolve, as in the minikube demo
     hostAliases: []
+
+  keycloak:
+    ## @param platform.keycloak.enabled Install a Keycloak of the chart's own, a demo and trial identity provider with the two realms AIsolate needs: platform.identity and platform.identity.operators then default to its realms; a production install names its own provider there instead
+    enabled: false
+    ## @param platform.keycloak.host The chart's Keycloak host: the issuer the browsers, the UI, the CLI and the chat see
+    host: keycloak.aisolate.example.com
+    image:
+      ## @param platform.keycloak.image.registry Keycloak image registry
+      registry: ""
+      ## @param platform.keycloak.image.repository Keycloak image repository, the stock image: it imports the chart's two realms at its first start
+      repository: quay.io/keycloak/keycloak
+      ## @param platform.keycloak.image.tag Keycloak image tag, used only with allowTags
+      tag: "26.7.3"
+      ## @param platform.keycloak.image.digest Keycloak image digest (sha256:…), the chart's pin of 26.7.3; wins over the tag
+      digest: sha256:29be7252db0a106f1cd2ac17b9a56ff2668073da645638a38b9fc67deeb2d6c4
+      ## @param platform.keycloak.image.pullPolicy Keycloak image pull policy
+      pullPolicy: IfNotPresent
+      ## @param platform.keycloak.image.pullSecrets Keycloak image pull Secret names
+      pullSecrets: []
+    realms:
+      operators:
+        ## @param platform.keycloak.realms.operators.name The operators' realm: the AIsolate UI (client aisolate-ui) and the CLI (aisolate-cli) sign in there; its realm roles aisolate-admin and aisolate-auditor
+        name: aisolate
+      users:
+        ## @param platform.keycloak.realms.users.name The application users' realm: the chat (client aisolate-chat, and any client it registers from platform.chat.host) signs its users in there; the roles the rules name are its realm roles
+        name: acme
+    ## @param platform.keycloak.demoUsers Create the demo cast at the first start (operators realm: admin, developer, auditor; users realm: jane the CEO, john the employee, auditor, with those realm roles), each with their password from the Secret
+    demoUsers: false
+    ## @param platform.keycloak.existingSecret A Secret you create with Keycloak's admin password under the key admin-password (the demo admin's too) and, with demoUsers, developer-password, auditor-password, jane-password and john-password; empty: the chart generates the Secret keycloak with those keys and keeps it with lookup (set one for a render without a cluster, see persistence.postgres.existingSecret)
+    existingSecret: ""
+    ## @param platform.keycloak.resources [object] Keycloak container resources (requests, limits)
+    resources: {}
+    persistence:
+      ## @param platform.keycloak.persistence.size The size of the PersistentVolumeClaim keycloak its file database keeps the realms, users and registered clients on; the realms are imported into an empty one only: delete it to import them again
+      size: 1Gi
+      ## @param platform.keycloak.persistence.storageClass Its StorageClass; empty: the cluster's default
+      storageClass: ""
 
   backend:
     ## @param platform.backend.host Backend host (headless=false): the AIsolate UI's API and the CLI's endpoint

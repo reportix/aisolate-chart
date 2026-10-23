@@ -38,7 +38,7 @@ spec:
         - port: 5432
           protocol: TCP
     {{- with .Values.platform.identity.operators.egress }}{{ $_ := required "platform.identity.operators.egress.port is required" .port }}{{ $_ := include "aisolate.peer" . }}{{ end }}
-    {{- with .Values.platform.identity.operators.egress | default .Values.platform.identity.egress }}
+    {{- with include "aisolate.identity.operators.egress" . | fromYaml }}
     - to:
 {{ include "aisolate.policyPeer" . | indent 8 }}
       {{- with .port }}

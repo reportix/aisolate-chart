@@ -1,0 +1,13 @@
+{{- if .Values.platform.keycloak.enabled }}
+# The two realms Keycloak imports at its first start, from files/keycloak with the hosts from the values: the operators'
+# (the AIsolate UI, the CLI) and the application users' (the chat). The demo cast's passwords are the Secret's, by the
+# ${<USER>_PASSWORD} Keycloak fills at import: no password is in here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realms
+  namespace: {{ .Release.Namespace }}
+data:
+  realm-operators.json: {{ tpl (.Files.Get "files/keycloak/realm-operators.json") . | quote }}
+  realm-users.json: {{ tpl (.Files.Get "files/keycloak/realm-users.json") . | quote }}
+{{- end }}

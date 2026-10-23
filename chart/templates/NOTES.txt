@@ -10,6 +10,9 @@ its code ConfigMaps included: kubectl apply -f <export> -n {{ .Release.Namespace
 {{- if .Values.platform.chat.enabled }}
 Chat            {{ include "aisolate.scheme" . }}://{{ .Values.platform.chat.host }}   (its origin belongs in platform.airlock.corsAllowedOrigins)
 {{- end }}
+{{- if .Values.platform.keycloak.enabled }}
+Keycloak        {{ include "aisolate.scheme" . }}://{{ .Values.platform.keycloak.host }}   realms {{ .Values.platform.keycloak.realms.operators.name }} (operators) and {{ .Values.platform.keycloak.realms.users.name }} (users); admin's password: kubectl get secret {{ .Values.platform.keycloak.existingSecret | default "keycloak" }} -n {{ .Release.Namespace }} -o jsonpath='{.data.admin-password}' | base64 -d
+{{- end }}
 Status: kubectl get spaces,airlocks -n {{ .Release.Namespace }}
 {{- if not .Values.platform.egress.apiServer.cidr }}
 

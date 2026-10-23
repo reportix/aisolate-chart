@@ -1,0 +1,118 @@
+{{- if .Values.platform.keycloak.enabled }}
+# The chart's Keycloak, a demo and trial identity provider: the stock image, its file database on the
+# PersistentVolumeClaim keycloak, the two realms imported at the first start. Its hostname is the public one, so every
+# token carries the issuer the browser used; the pods fetch the keys through its Service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+      annotations:
+        checksum/realms: {{ include (print $.Template.BasePath "/platform/keycloak/configmap.yaml") . | sha256sum | trunc 12 | quote }}
+    spec:
+      automountServiceAccountToken: false
+      {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        runAsUser: 1000   # the image's keycloak user; runAsNonRoot needs the number to verify
+        fsGroup: 1000     # the data volume writable by it
+        {{- include "aisolate.podSecurity" . | nindent 8 }}
+      initContainers:
+        # The server's build for the chart's options, handed to the container below: it starts --optimized on its
+        # read-only root (the image's own build is for other options and would be rebuilt there).
+        - name: build
+          image: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.keycloak.image "context" $) }}
+          imagePullPolicy: {{ .Values.platform.keycloak.image.pullPolicy }}
+          command: [/bin/bash, -c, "/opt/keycloak/bin/kc.sh build --db=dev-file --health-enabled=true && cp -r /opt/keycloak/lib/quarkus/. /build/"]
+          {{- with .Values.platform.keycloak.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: build
+              mountPath: /build
+      containers:
+        - name: keycloak
+          image: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.keycloak.image "context" $) }}
+          imagePullPolicy: {{ .Values.platform.keycloak.image.pullPolicy }}
+          args: [start, --optimized, --import-realm]
+          env:
+            - name: KC_HOSTNAME
+              value: "{{ include "aisolate.scheme" . }}://{{ .Values.platform.keycloak.host }}"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.platform.keycloak.existingSecret | default "keycloak" }}
+                  key: admin-password
+            {{- if .Values.platform.keycloak.demoUsers }}
+            {{- /* The demo cast's passwords, one key each, filled into the realms' ${<USER>_PASSWORD} at import. */}}
+            {{- range $user := list "admin" "developer" "auditor" "jane" "john" }}
+            - name: {{ upper $user }}_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.platform.keycloak.existingSecret | default "keycloak" }}
+                  key: {{ $user }}-password
+            {{- end }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 60
+          {{- with .Values.platform.keycloak.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- include "aisolate.containerSecurity" . | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /opt/keycloak/data
+            - name: realms
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+            - name: build
+              mountPath: /opt/keycloak/lib/quarkus
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: keycloak
+        - name: realms
+          configMap:
+            name: keycloak-realms
+        - name: build
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+{{- end }}

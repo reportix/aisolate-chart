@@ -3,6 +3,7 @@ headless: false
 platform:
   # AIsolate's own provider for the dashboard and the CLI; the users' stays the default.
   identity:
+    issuerUri: https://idp.example.com/realms/customer
     operators:
       issuerUri: https://idp-ops.example.com/realms/aisolate
   # Monitoring: the trace store's query API and its peer.

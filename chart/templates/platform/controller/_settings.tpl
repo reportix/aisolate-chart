@@ -21,11 +21,11 @@ aisolate:
       pullPolicy: {{ .Values.platform.airlock.image.pullPolicy }}
       allowTags: {{ .Values.allowTags }}
     identity:
-      issuerUri: {{ .Values.platform.identity.issuerUri | quote }}
-      jwkSetUri: {{ .Values.platform.identity.jwkSetUri | quote }}
+      issuerUri: {{ include "aisolate.identity.issuerUri" . | quote }}
+      jwkSetUri: {{ include "aisolate.identity.jwkSetUri" . | quote }}
       rolesClaim: {{ .Values.platform.identity.rolesClaim | quote }}
       egress:
-{{ include "aisolate.peer" .Values.platform.identity.egress | indent 8 }}
+{{ include "aisolate.peer" (include "aisolate.identity.egress" . | fromYaml) | indent 8 }}
     egress:
       dns:
 {{ include "aisolate.peer" .Values.platform.egress.dns | indent 8 }}

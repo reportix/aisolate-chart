@@ -1,0 +1,14 @@
+{{- if .Values.platform.keycloak.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+{{- end }}

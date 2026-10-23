@@ -18,6 +18,7 @@ helm lint chart --values "$values/headless.yaml" >/dev/null || fail "helm lint (
 prod=$(render_with --values "$values/headless.yaml")
 ui=$(render_with --values "$values/ui.yaml")
 chat=$(render_with --values "$values/chat.yaml")
+kc=$(render_with --values "$values/keycloak.yaml")
 
 echo "headless (default): exactly the controller and the release-level objects"
 [ "$(echo "$prod" | count Deployment)" = 1 ] || fail "headless renders $(echo "$prod" | count Deployment) Deployments, expected the controller only"
@@ -35,14 +36,14 @@ for pod in backend ui db; do
   echo "$ui" | yq -N "select(.kind == \"NetworkPolicy\" and .spec.podSelector.matchLabels.app == \"$pod\") | .metadata.name" | grep . >/dev/null || fail "no NetworkPolicy opens the $pod pod inside the default-deny"
 done
 [ "$(echo "$ui" | count Namespace)" = 0 ] || fail "headless=false renders a Namespace: the AIsolate UI shares aisolate"
-for doc in "$prod" "$ui" "$chat"; do
+for doc in "$prod" "$ui" "$chat" "$kc"; do
   echo "$doc" | yq -N 'select(.kind == "Deployment" and .metadata.namespace != "aisolate") | .metadata.name' | grep . >/dev/null && fail "a Deployment outside aisolate"
   echo "$doc" | yq -N "$restricted" | grep . && fail "the Deployments above do not pass the restricted Pod Security Standard aisolate enforces"
   echo "$doc" | yq -N 'select(.kind == "Deployment" and .metadata.name != "aisolate-controller") | .spec.template.spec.containers[].env[]?.name' | grep -E -x 'AISOLATE_(OLLAMA_URL|TOOL_SERVER_URL|CONTEXT_PREPARATOR_DB_URL)' >/dev/null && fail "a Deployment names a model or tool server: only the pods talk to them"
 done
 
 echo "no policy of the chart's pods opens everything (helm test's own aside); the UI reaches nothing"
-for doc in "$prod" "$ui" "$chat"; do
+for doc in "$prod" "$ui" "$chat" "$kc"; do
   echo "$doc" | yq -N 'select(.kind == "NetworkPolicy" and .metadata.name != "aisolate-test") | select([.spec.ingress[]?, .spec.egress[]?] | any_c(tag == "!!map" and length == 0)) | .metadata.name' | grep . && fail "the policies above admit or let out everything"
 done
 [ "$(echo "$ui" | yq -N 'select(.kind == "NetworkPolicy" and .metadata.name == "ui") | .spec.egress | length')" = 0 ] || fail "the UI may reach something: every API call is the browser's"
@@ -111,12 +112,12 @@ err=$(render_with --values "$values/ui.yaml" --set platform.identity.operators.e
 echo "$err" | grep -q "platform.identity.operators.egress.port is required" || fail "the render failed, but not on the operators' egress port: $err"
 
 echo "discovery reaches the discovery pods; an airlock's chat path is longer and wins"
-for doc in "$prod" "$ui" "$chat"; do
+for doc in "$prod" "$ui" "$chat" "$kc"; do
   echo "$doc" | yq -N 'select(.kind == "Ingress" and .metadata.name == "aisolate") | .spec.rules[].http.paths[] | select(.path == "/v1/spaces/" and .pathType == "Prefix") | .backend.service.name' | grep -x aisolate >/dev/null || fail "the release Ingress lacks the Prefix route for one airlock's discovery"
 done
 
 echo "the release Service carries every user's token: it selects the discovery pods alone, never a pod running an airlock's code"
-for doc in "$prod" "$ui" "$chat"; do
+for doc in "$prod" "$ui" "$chat" "$kc"; do
   selector=$(echo "$doc" | yq -N -o json -I0 'select(.kind == "Service" and .metadata.name == "aisolate") | .spec.selector')
   [ "$selector" = '{"aisolate.dev/role":"discovery"}' ] || fail "the aisolate Service selects $selector, not the discovery pods alone"
 done
@@ -126,12 +127,12 @@ tls=$(render_with --values "$values/ui.yaml" --set platform.ingress.tls=true --s
 [ "$tls" = "aisolate aisolate-tls true ca,backend backend-tls true ca,ui ui-tls true ca," ] || fail "an Ingress lacks its TLS or the annotations: $tls"
 
 echo "no route ever points at port 8081"
-for doc in "$prod" "$ui" "$chat"; do
+for doc in "$prod" "$ui" "$chat" "$kc"; do
   echo "$doc" | yq -N 'select(.kind == "Ingress") | .spec.rules[].http.paths[].backend.service.port.number' | grep -x 8081 >/dev/null && fail "an Ingress targets 8081"
 done
 
 echo "every Deployment but the controller and the backend mounts no ServiceAccount token"
-for doc in "$prod" "$ui" "$chat"; do
+for doc in "$prod" "$ui" "$chat" "$kc"; do
   echo "$doc" | yq -N 'select(.kind == "Deployment" and .metadata.name != "aisolate-controller" and .metadata.name != "backend") | .spec.template.spec.automountServiceAccountToken' | grep -v '^false$' | grep . >/dev/null && fail "a Deployment mounts a token"
 done
 
@@ -157,7 +158,7 @@ scraper_port() { yq -N "select(.kind == \"NetworkPolicy\" and .metadata.name == 
 [ "$(echo "$ui" | scraper_port backend)" = 9464 ] || fail "the backend's policy does not admit the scraper on 9464 alone: $(echo "$ui" | scraper_port backend)"
 
 echo "the management port (9464) is on no Service and no Ingress; the kubelet probes it"
-for doc in "$prod" "$ui" "$chat"; do
+for doc in "$prod" "$ui" "$chat" "$kc"; do
   echo "$doc" | yq -N 'select(.kind == "Service") | .spec.ports[] | (.port, .targetPort)' | grep -x -E '9464|management' >/dev/null && fail "a Service exposes the management port"
   echo "$doc" | yq -N 'select(.kind == "Ingress") | .spec.rules[].http.paths[].backend.service.port | (.number, .name)' | grep -x -E '9464|management' >/dev/null && fail "an Ingress routes to the management port"
 done
@@ -167,7 +168,7 @@ for policy in db ui default-deny; do
 done
 
 echo "every container of the chart's Deployments has a read-only root and runs an image by digest"
-for doc in "$ui" "$proxy" "$chat"; do
+for doc in "$ui" "$proxy" "$chat" "$kc"; do
   echo "$doc" | yq -N 'select(.kind == "Deployment") | .spec.template.spec.containers[] | select(.securityContext.readOnlyRootFilesystem != true) | .name' | grep . && fail "the containers above write their root filesystem"
   echo "$doc" | yq -N 'select(.kind == "Deployment") | .spec.template.spec.containers[].image' | grep -v '@sha256:' && fail "the images above ship without a digest"
 done
@@ -176,6 +177,7 @@ echo "every Deployment's container takes its resources from the values"
 sized=$(render_with --values "$values/ui.yaml" --set 'platform.egress.proxy.domains[0]=idp.example.com' --set platform.egress.proxy.image.digest=sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd \
   --set platform.controller.resources.requests.cpu=1m --set platform.backend.resources.requests.cpu=1m --set platform.frontend.resources.requests.cpu=1m \
   --set platform.chat.enabled=true --set platform.chat.image.digest=sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff --set platform.chat.resources.requests.cpu=1m \
+  --set platform.keycloak.enabled=true --set platform.keycloak.resources.requests.cpu=1m \
   --set platform.egress.proxy.resources.requests.cpu=1m --set persistence.postgres.resources.requests.cpu=1m)
 echo "$sized" | yq -N 'select(.kind == "Deployment") | select(.spec.template.spec.containers[0].resources.requests.cpu != "1m") | .metadata.name' | grep . && fail "the Deployments above ignore their resources value"
 
@@ -208,7 +210,7 @@ secret_verbs=$(echo "$ui" | yq -N "$role | select(.resources | any_c(test(\"^(se
 [ "$secret_verbs" = "create delete " ] || fail "the backend's Secret verbs are '$secret_verbs', expected create and delete only: get, list, watch, patch and update return the data"
 
 echo "the controller's settings and the proxy's config are in no ConfigMap"
-for doc in "$ui" "$proxy" "$chat"; do
+for doc in "$ui" "$proxy" "$chat" "$kc"; do
   echo "$doc" | yq -N 'select(.kind == "Deployment" and (.metadata.name == "aisolate-controller" or .metadata.name == "egress-proxy")) | .spec.template.spec.volumes[] | select(.configMap) | .name' | grep . && fail "the volumes above are ConfigMaps"
 done
 echo "$ui" | yq -N 'select(.kind == "ConfigMap") | .metadata.name' | grep . && fail "the chart renders the ConfigMaps above"
@@ -282,5 +284,44 @@ chat_peer() { yq -N -o json -I0 "select(.kind == \"NetworkPolicy\" and .metadata
 echo "$chat" | yq -N 'select(.kind == "Deployment" and .metadata.name == "chat") | .spec.template.spec.hostAliases' | grep -v '^null$' | grep . && fail "the chat pod carries host entries nobody set"
 aliased=$(render_with --values "$values/chat.yaml" --set 'platform.chat.hostAliases[0].ip=10.96.0.10' --set 'platform.chat.hostAliases[0].hostnames={aisolate.example.com,idp.example.com}' | yq -N -o json -I0 'select(.kind == "Deployment" and .metadata.name == "chat") | .spec.template.spec.hostAliases')
 [ "$aliased" = '[{"hostnames":["aisolate.example.com","idp.example.com"],"ip":"10.96.0.10"}]' ] || fail "platform.chat.hostAliases does not reach the chat pod: $aliased"
+
+echo "platform.keycloak.enabled: a Keycloak of the chart's own with the two realms; the pods take its users realm, the backend its operators realm, unless a provider is named"
+[ "$(echo "$kc" | count Deployment)" = 6 ] || fail "headless=false with the chat and Keycloak renders $(echo "$kc" | count Deployment) Deployments, expected 6"
+echo "$ui" | yq -N 'select(.metadata.name == "keycloak") | .kind' | grep . && fail "headless=false installs Keycloak unasked"
+for kind in Deployment Service Ingress NetworkPolicy PersistentVolumeClaim Secret; do
+  echo "$kc" | yq -N "select(.kind == \"$kind\" and .metadata.name == \"keycloak\") | .metadata.name" | grep -x keycloak >/dev/null || fail "Keycloak has no $kind"
+done
+[ "$(echo "$kc" | yq -N 'select(.kind == "Ingress" and .metadata.name == "keycloak") | .spec.rules[0].host')" = keycloak.example.com ] || fail "Keycloak's Ingress does not serve platform.keycloak.host"
+[ "$(echo "$kc" | ingress_ports keycloak)" = "8080 8080 " ] || fail "Keycloak admits more than the ingress controller and the pods on 8080: $(echo "$kc" | ingress_ports keycloak)"
+[ "$(echo "$kc" | egress_ports keycloak)" = "53 " ] || fail "Keycloak reaches more than the DNS: $(echo "$kc" | egress_ports keycloak)"
+kc_from=$(echo "$kc" | yq -N -o json -I0 'select(.kind == "NetworkPolicy" and .metadata.name == "keycloak") | .spec.ingress[1].from')
+[ "$kc_from" = '[{"podSelector":{"matchLabels":{"app":"backend"}}},{"podSelector":{"matchExpressions":[{"key":"aisolate.dev/role","operator":"In","values":["airlock","tool-server","discovery"]}]}}]' ] || fail "Keycloak's in-cluster peers are not the backend and the airlock, tool server and discovery pods: $kc_from"
+settings_identity() { yq -N 'select(.kind == "Deployment" and .metadata.name == "aisolate-controller") | .spec.template.metadata.annotations["aisolate.dev/settings"]' | yq -N -o json -I0 '.aisolate.controller.identity'; }
+[ "$(echo "$kc" | settings_identity | jq -r '.issuerUri + " " + .jwkSetUri + " " + .egress.podSelector["[app]"] + " " + (.egress.port | tostring)')" = "https://keycloak.example.com/realms/acme http://keycloak.aisolate.svc:8080/realms/acme/protocol/openid-connect/certs keycloak 8080" ] \
+  || fail "the pods do not take the users realm of the chart's Keycloak, its in-cluster keys and its peer: $(echo "$kc" | settings_identity)"
+[ "$(issuer "$kc")" = https://keycloak.example.com/realms/aisolate ] || fail "the backend does not take the operators realm of the chart's Keycloak: $(issuer "$kc")"
+[ "$(jwks "$kc")" = http://keycloak.aisolate.svc:8080/realms/aisolate/protocol/openid-connect/certs ] || fail "the backend does not fetch the operators realm's keys in-cluster: $(jwks "$kc")"
+[ "$(echo "$kc" | yq -N 'select(.kind == "NetworkPolicy" and .metadata.name == "backend") | .spec.egress[] | select(.ports[].port == 8080) | .to[].podSelector.matchLabels.app')" = keycloak ] || fail "the backend's policy does not reach Keycloak on 8080"
+named=$(render_with --values "$values/keycloak.yaml" --set platform.identity.issuerUri=https://idp.example.com/realms/customer --set platform.identity.operators.issuerUri=https://idp-ops.example.com/realms/aisolate)
+[ "$(echo "$named" | settings_identity | jq -r '.issuerUri + " " + (.jwkSetUri // "") + " " + (.egress | length | tostring)')" = "https://idp.example.com/realms/customer  0" ] || fail "a named users' provider does not win over the chart's Keycloak: $(echo "$named" | settings_identity)"
+[ "$(issuer "$named") $(jwks "$named")" = "https://idp-ops.example.com/realms/aisolate " ] || fail "a named operators' provider does not win over the chart's Keycloak: $(issuer "$named") $(jwks "$named")"
+err=$(render_with --values "$values/headless.yaml" --set platform.identity.issuerUri= 2>&1 >/dev/null) && fail "the chart rendered without any identity provider"
+echo "$err" | grep -q "platform.identity.issuerUri is required" || fail "the render failed, but not on the missing identity provider: $err"
+echo "$kc" | yq -N 'select(.kind == "Deployment" and .metadata.name == "keycloak") | .spec.template.spec.containers[0].env[] | select(.name | test("PASSWORD")) | .value' | grep -v '^null$' | grep . && fail "a Keycloak password is a literal in the pod"
+realm() { yq -N "select(.kind == \"ConfigMap\" and .metadata.name == \"keycloak-realms\") | .data[\"realm-$1.json\"]"; }
+for r in operators users; do echo "$kc" | realm $r | jq -e . >/dev/null || fail "the $r realm is not valid JSON after tpl"; done
+[ "$(echo "$kc" | realm operators | jq -r '.realm + " " + ([.users[].username] | join(",")) + " " + ([.users[].credentials[].value] | unique | join(","))')" = 'aisolate admin,developer,auditor ${ADMIN_PASSWORD},${AUDITOR_PASSWORD},${DEVELOPER_PASSWORD}' ] || fail "the operators realm's demo users or their password placeholder are off: $(echo "$kc" | realm operators | jq -c '[.realm, [.users[].username]]')"
+[ "$(echo "$kc" | realm users | jq -r '.realm + " " + ([.clients[].clientId] | join(",")) + " " + (.clients[0].redirectUris[0]) + " " + ([.users[].username] | join(","))')" = "acme aisolate-chat https://chat.example.com/* jane,john,auditor" ] || fail "the users realm's chat client or demo users are off: $(echo "$kc" | realm users | jq -c '[.realm, [.clients[].clientId], [.users[].username]]')"
+[ "$(echo "$kc" | realm users | jq -r '.components["org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy"][] | select(.providerId == "trusted-hosts") | .config["trusted-hosts"][0]')" = chat.example.com ] || fail "the users realm does not trust the chat's host for registration"
+[ "$(echo "$kc" | realm operators | jq -r '.clients[] | select(.clientId == "aisolate-ui") | .redirectUris[0]')" = "https://ui.example.com/*" ] || fail "aisolate-ui does not redirect to the UI's host"
+quiet=$(render_with --values "$values/keycloak.yaml" --set platform.keycloak.demoUsers=false)
+[ "$(echo "$quiet" | realm operators | jq '.users | length') $(echo "$quiet" | realm users | jq '.users | length')" = "0 0" ] || fail "demoUsers=false still imports users"
+echo "$quiet" | yq -N 'select(.kind == "Deployment" and .metadata.name == "keycloak") | .spec.template.spec.containers[0].env[].name' | grep -x -E 'JANE_PASSWORD|DEVELOPER_PASSWORD' && fail "demoUsers=false still hands the demo passwords to the pod"
+[ "$(echo "$kc" | yq -N 'select(.kind == "Deployment" and .metadata.name == "keycloak") | .spec.template.spec.containers[0].env[] | select(.name == "JANE_PASSWORD") | .valueFrom.secretKeyRef.key')" = jane-password ] || fail "jane's password does not come from the key jane-password"
+[ "$(echo "$kc" | yq -N 'select(.kind == "Secret" and .metadata.name == "keycloak") | .data | keys | sort | join(",")')" = "admin-password,auditor-password,developer-password,jane-password,john-password" ] || fail "the Secret keycloak lacks a demo user's key"
+[ "$(echo "$kc" | yq -N 'select(.kind == "Deployment" and .metadata.name == "keycloak") | .spec.template.spec.initContainers[0].command[2]')" = "/opt/keycloak/bin/kc.sh build --db=dev-file --health-enabled=true && cp -r /opt/keycloak/lib/quarkus/. /build/" ] || fail "the init container does not build the server for the chart's options"
+own=$(render_with --values "$values/keycloak.yaml" --set platform.keycloak.existingSecret=my-keycloak)
+echo "$own" | yq -N 'select(.kind == "Secret" and .metadata.name == "keycloak") | .metadata.name' | grep . && fail "platform.keycloak.existingSecret still generates the Secret keycloak"
+[ "$(echo "$own" | yq -N 'select(.kind == "Deployment" and .metadata.name == "keycloak") | .spec.template.spec.containers[0].env[] | select(.name == "KC_BOOTSTRAP_ADMIN_PASSWORD") | .valueFrom.secretKeyRef.name')" = my-keycloak ] || fail "the admin password does not come from platform.keycloak.existingSecret"
 
 echo "render checks passed"

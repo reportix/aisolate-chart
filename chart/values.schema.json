@@ -335,7 +335,7 @@
                         },
                         "tls": {
                             "type": "boolean",
-                            "description": "Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls, with the chat chat-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too",
+                            "description": "Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls, with the chat chat-tls, with the chart's Keycloak keycloak-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too",
                             "default": false
                         },
                         "annotations": {
@@ -352,12 +352,12 @@
                     "properties": {
                         "issuerUri": {
                             "type": "string",
-                            "description": "The application users' identity provider: the issuer the pods validate tokens against; the backend too unless operators.issuerUri is set",
-                            "default": "https://idp.example.com/realms/customer"
+                            "description": "The application users' identity provider: the issuer the pods validate tokens against; the backend too unless operators.issuerUri is set; empty: the users realm of the chart's Keycloak (platform.keycloak.enabled), else required",
+                            "default": ""
                         },
                         "jwkSetUri": {
                             "type": "string",
-                            "description": "Where the pods fetch the provider's keys; the backend too unless operators.issuerUri is set",
+                            "description": "Where the pods fetch the provider's keys; the backend too unless operators.issuerUri is set; empty with the chart's Keycloak: its in-cluster Service",
                             "default": ""
                         },
                         "rolesClaim": {
@@ -377,7 +377,7 @@
                             "properties": {
                                 "issuerUri": {
                                     "type": "string",
-                                    "description": "AIsolate's own identity provider for the dashboard and the CLI; empty: the one above",
+                                    "description": "AIsolate's own identity provider for the dashboard and the CLI; empty: the operators realm of the chart's Keycloak (platform.keycloak.enabled), else the one above",
                                     "default": ""
                                 },
                                 "jwkSetUri": {
@@ -697,6 +697,119 @@
                             "type": "array",
                             "description": "Host entries of the chat pod (ip, hostnames), for a release host and identity provider the cluster's DNS does not resolve, as in the minikube demo",
                             "default": "[]"
+                        }
+                    }
+                },
+                "keycloak": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Install a Keycloak of the chart's own, a demo and trial identity provider with the two realms AIsolate needs: platform.identity and platform.identity.operators then default to its realms; a production install names its own provider there instead",
+                            "default": false
+                        },
+                        "host": {
+                            "type": "string",
+                            "description": "The chart's Keycloak host: the issuer the browsers, the UI, the CLI and the chat see",
+                            "default": "keycloak.aisolate.example.com"
+                        },
+                        "image": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "registry": {
+                                    "type": "string",
+                                    "description": "Keycloak image registry",
+                                    "default": ""
+                                },
+                                "repository": {
+                                    "type": "string",
+                                    "description": "Keycloak image repository, the stock image: it imports the chart's two realms at its first start",
+                                    "default": "quay.io/keycloak/keycloak"
+                                },
+                                "tag": {
+                                    "type": "string",
+                                    "description": "Keycloak image tag, used only with allowTags",
+                                    "default": "26.7.3"
+                                },
+                                "digest": {
+                                    "type": "string",
+                                    "description": "Keycloak image digest (sha256:…), the chart's pin of 26.7.3; wins over the tag",
+                                    "default": "sha256:29be7252db0a106f1cd2ac17b9a56ff2668073da645638a38b9fc67deeb2d6c4"
+                                },
+                                "pullPolicy": {
+                                    "type": "string",
+                                    "description": "Keycloak image pull policy",
+                                    "default": "IfNotPresent"
+                                },
+                                "pullSecrets": {
+                                    "type": "array",
+                                    "description": "Keycloak image pull Secret names",
+                                    "default": [],
+                                    "items": {}
+                                }
+                            }
+                        },
+                        "realms": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "operators": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "The operators' realm: the AIsolate UI (client aisolate-ui) and the CLI (aisolate-cli) sign in there; its realm roles aisolate-admin and aisolate-auditor",
+                                            "default": "aisolate"
+                                        }
+                                    }
+                                },
+                                "users": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "The application users' realm: the chat (client aisolate-chat, and any client it registers from platform.chat.host) signs its users in there; the roles the rules name are its realm roles",
+                                            "default": "acme"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "demoUsers": {
+                            "type": "boolean",
+                            "description": "Create the demo cast at the first start (operators realm: admin, developer, auditor; users realm: jane the CEO, john the employee, auditor, with those realm roles), each with their password from the Secret",
+                            "default": false
+                        },
+                        "existingSecret": {
+                            "type": "string",
+                            "description": "A Secret you create with Keycloak's admin password under the key admin-password (the demo admin's too) and, with demoUsers, developer-password, auditor-password, jane-password and john-password; empty: the chart generates the Secret keycloak with those keys and keeps it with lookup (set one for a render without a cluster, see persistence.postgres.existingSecret)",
+                            "default": ""
+                        },
+                        "resources": {
+                            "type": "object",
+                            "description": "Keycloak container resources (requests, limits)",
+                            "additionalProperties": true,
+                            "default": "{}"
+                        },
+                        "persistence": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "size": {
+                                    "type": "string",
+                                    "description": "The size of the PersistentVolumeClaim keycloak its file database keeps the realms, users and registered clients on; the realms are imported into an empty one only: delete it to import them again",
+                                    "default": "1Gi"
+                                },
+                                "storageClass": {
+                                    "type": "string",
+                                    "description": "Its StorageClass; empty: the cluster's default",
+                                    "default": ""
+                                }
+                            }
                         }
                     }
                 },

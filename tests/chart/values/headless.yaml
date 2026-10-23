@@ -1,5 +1,7 @@
 # The smallest production install: the five AIsolate images by digest, everything else default.
 platform:
+  identity:
+    issuerUri: https://idp.example.com/realms/customer
   controller:
     image:
       digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

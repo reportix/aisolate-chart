@@ -30,11 +30,12 @@ render() {
     name=$(basename "$values" .yaml)
     name=${name%-values}
     name=${name#values-}
-    # The database password, the audit ingest key and the credentials key are random per render: the goldens keep their place, not their value.
+    # The database password, the audit ingest key, the credentials key and Keycloak's passwords are random per render: the goldens keep their place, not their value.
     helm template aisolate chart --namespace aisolate --values "$values" \
       | yq '... comments="" | (select(.kind == "Secret" and .metadata.name == "db") | .data.password) = "generated"
           | (select(.kind == "Secret" and .metadata.name == "audit-ingest") | .data.key) = "generated"
           | (select(.kind == "Secret" and .metadata.name == "credentials-key") | .data.key) = "generated"
+          | (select(.kind == "Secret" and .metadata.name == "keycloak") | .data[]) = "generated"
           | (select(.spec.template.metadata.annotations["checksum/credentials-key"] != null) | .spec.template.metadata.annotations["checksum/credentials-key"]) = "generated"
           | (select(.spec.template.metadata.annotations["checksum/audit-ingest-key"] != null) | .spec.template.metadata.annotations["checksum/audit-ingest-key"]) = "generated"
           | (select(.spec.template.metadata.annotations["checksum/db-password"] != null) | .spec.template.metadata.annotations["checksum/db-password"]) = "generated"' \

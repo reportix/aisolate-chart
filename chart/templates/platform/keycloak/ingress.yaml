@@ -1,0 +1,3 @@
+{{- if .Values.platform.keycloak.enabled }}
+{{ include "aisolate.ingress" (dict "name" "keycloak" "host" .Values.platform.keycloak.host "port" 8080 "context" $) }}
+{{- end }}

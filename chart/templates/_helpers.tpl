@@ -22,6 +22,7 @@ the render.
     .Values.platform.egress.proxy.image
     .Values.platform.frontend.image
     .Values.platform.chat.image
+    .Values.platform.keycloak.image
     .Values.platform.backend.image
     .Values.persistence.postgres.image
     .Values.test.image
@@ -81,6 +82,65 @@ checksum/credentials-key: {{ include "aisolate.credentialsKey" . | sha256sum | t
 {{- if not .Values.persistence.postgres.existingSecret -}}
 checksum/db-password: {{ include "aisolate.dbPassword" . | sha256sum | trunc 12 | quote }}
 {{- end -}}
+{{- end -}}
+
+{{/* The identity providers: the values, or with platform.keycloak.enabled the chart's Keycloak: the users realm for the
+     pods, the operators realm for the backend, the keys from its in-cluster Service. A value that is set wins; a
+     provider set by its issuer takes no default for its keys or its peer. */}}
+{{- define "aisolate.keycloakRealm" -}}
+{{- include "aisolate.scheme" .context }}://{{ .context.Values.platform.keycloak.host }}/realms/{{ .realm }}
+{{- end -}}
+{{- define "aisolate.keycloakJwks" -}}
+http://keycloak.{{ .context.Release.Namespace }}.svc:8080/realms/{{ .realm }}/protocol/openid-connect/certs
+{{- end -}}
+{{- define "aisolate.keycloakPeer" -}}
+namespaceSelector:
+  kubernetes.io/metadata.name: {{ .Release.Namespace | quote }}
+podSelector:
+  app: keycloak
+port: 8080
+{{- end -}}
+{{- define "aisolate.identity.issuerUri" -}}
+{{- if .Values.platform.identity.issuerUri }}{{ .Values.platform.identity.issuerUri }}
+{{- else if .Values.platform.keycloak.enabled }}{{ include "aisolate.keycloakRealm" (dict "realm" .Values.platform.keycloak.realms.users.name "context" $) }}
+{{- else }}{{ fail "platform.identity.issuerUri is required unless platform.keycloak.enabled" }}{{ end -}}
+{{- end -}}
+{{- define "aisolate.identity.jwkSetUri" -}}
+{{- if .Values.platform.identity.jwkSetUri }}{{ .Values.platform.identity.jwkSetUri }}
+{{- else if and .Values.platform.keycloak.enabled (not .Values.platform.identity.issuerUri) }}{{ include "aisolate.keycloakJwks" (dict "realm" .Values.platform.keycloak.realms.users.name "context" $) }}{{ end -}}
+{{- end -}}
+{{- define "aisolate.identity.egress" -}}
+{{- if .Values.platform.identity.egress }}{{ toYaml .Values.platform.identity.egress }}
+{{- else if and .Values.platform.keycloak.enabled (not .Values.platform.identity.issuerUri) }}{{ include "aisolate.keycloakPeer" . }}
+{{- else }}{}{{ end -}}
+{{- end -}}
+{{- define "aisolate.identity.operators.issuerUri" -}}
+{{- if .Values.platform.identity.operators.issuerUri }}{{ .Values.platform.identity.operators.issuerUri }}
+{{- else if .Values.platform.keycloak.enabled }}{{ include "aisolate.keycloakRealm" (dict "realm" .Values.platform.keycloak.realms.operators.name "context" $) }}{{ end -}}
+{{- end -}}
+{{/* The backend's keys: the operators' provider's when it has one of its own, else the shared provider's. */}}
+{{- define "aisolate.identity.operators.jwkSetUri" -}}
+{{- if .Values.platform.identity.operators.issuerUri }}{{ .Values.platform.identity.operators.jwkSetUri }}
+{{- else if .Values.platform.keycloak.enabled }}{{ include "aisolate.keycloakJwks" (dict "realm" .Values.platform.keycloak.realms.operators.name "context" $) }}
+{{- else }}{{ include "aisolate.identity.jwkSetUri" . }}{{ end -}}
+{{- end -}}
+{{- define "aisolate.identity.operators.egress" -}}
+{{- if .Values.platform.identity.operators.egress }}{{ toYaml .Values.platform.identity.operators.egress }}
+{{- else if and .Values.platform.keycloak.enabled (not .Values.platform.identity.operators.issuerUri) }}{{ include "aisolate.keycloakPeer" . }}
+{{- else }}{{ include "aisolate.identity.egress" . }}{{ end -}}
+{{- end -}}
+
+{{/* Keycloak's passwords (platform.keycloak.enabled), by key: the existing Secret's on an upgrade, else a new random
+     one, kept on the root context like the database's password. admin-password bootstraps Keycloak (and is the demo
+     admin's); <user>-password is each demo user's. */}}
+{{- define "aisolate.keycloakSecret" -}}
+{{- $ctx := .context -}}
+{{- if not (hasKey $ctx "aisolateKeycloakSecret") -}}
+{{- $_ := set $ctx "aisolateKeycloakSecret" ((lookup "v1" "Secret" $ctx.Release.Namespace "keycloak").data | default dict) -}}
+{{- end -}}
+{{- $data := $ctx.aisolateKeycloakSecret -}}
+{{- if not (hasKey $data .key) -}}{{- $_ := set $data .key (randAlphaNum 32 | b64enc) -}}{{- end -}}
+{{- index $data .key | b64dec -}}
 {{- end -}}
 
 {{/* The scheme every public host is served on: the release's. */}}

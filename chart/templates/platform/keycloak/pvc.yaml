@@ -1,0 +1,17 @@
+{{- if .Values.platform.keycloak.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: keycloak
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: keycloak
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with .Values.platform.keycloak.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.platform.keycloak.persistence.size | quote }}
+{{- end }}

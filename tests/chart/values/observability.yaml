@@ -1,5 +1,7 @@
 # headless.yaml sending traces: the OTLP endpoint and its host's peer.
 platform:
+  identity:
+    issuerUri: https://idp.example.com/realms/customer
   controller:
     image:
       digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
