@@ -46,7 +46,7 @@ Every tag `v<version>` publishes the packaged chart with a GitLab release of thi
 
 ```bash
 helm install aisolate \
-  'https://gitlab.reportix.com/aisolate/charts/-/jobs/artifacts/v0.1.0/raw/aisolate-0.1.0.tgz?job=chart-publish' -n aisolate --create-namespace -f values.yaml
+  'https://gitlab.reportix.com/aisolate/charts/-/jobs/artifacts/v0.1.1/raw/aisolate-0.1.1.tgz?job=chart-publish' -n aisolate --create-namespace -f values.yaml
 ```
 
 From a checkout, `helm install aisolate chart -n aisolate -f values.yaml`. The values file carries every

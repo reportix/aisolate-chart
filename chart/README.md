@@ -84,7 +84,7 @@ From the release's package (every tag `v<version>` publishes one), or from a che
 
 ```
 helm install aisolate \
-  'https://gitlab.reportix.com/aisolate/charts/-/jobs/artifacts/v0.1.0/raw/aisolate-0.1.0.tgz?job=chart-publish' --namespace aisolate --values <values.yaml>
+  'https://gitlab.reportix.com/aisolate/charts/-/jobs/artifacts/v0.1.1/raw/aisolate-0.1.1.tgz?job=chart-publish' --namespace aisolate --values <values.yaml>
 helm install aisolate ./chart --namespace aisolate --values chart/examples/example-values.yaml
 ```
 
