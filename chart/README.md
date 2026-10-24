@@ -77,11 +77,11 @@ kubectl patch serviceaccount default -n aisolate -p '{"imagePullSecrets":[{"name
 
 ## 3. Deploy the chart
 
-From this project's Helm package registry (channel `stable`), or from a checkout of the repository:
+From the release's package (every tag `v<version>` publishes one), or from a checkout of the repository:
 
 ```
-helm repo add aisolate https://gitlab.reportix.com/api/v4/projects/524/packages/helm/stable
-helm install aisolate aisolate/aisolate --namespace aisolate --values <values.yaml>
+helm install aisolate \
+  'https://gitlab.reportix.com/aisolate/charts/-/jobs/artifacts/v0.1.0/raw/aisolate-0.1.0.tgz?job=chart-publish' --namespace aisolate --values <values.yaml>
 helm install aisolate ./chart --namespace aisolate --values chart/examples/example-values.yaml
 ```
 

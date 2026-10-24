@@ -42,11 +42,11 @@ kubectl create namespace aisolate
 kubectl label namespace aisolate pod-security.kubernetes.io/enforce=restricted
 ```
 
-The chart is published to this project's Helm package registry (channel `stable`):
+Every tag `v<version>` publishes the packaged chart with a GitLab release of this project:
 
 ```bash
-helm repo add aisolate https://gitlab.reportix.com/api/v4/projects/524/packages/helm/stable
-helm install aisolate aisolate/aisolate -n aisolate --create-namespace -f values.yaml
+helm install aisolate \
+  'https://gitlab.reportix.com/aisolate/charts/-/jobs/artifacts/v0.1.0/raw/aisolate-0.1.0.tgz?job=chart-publish' -n aisolate --create-namespace -f values.yaml
 ```
 
 From a checkout, `helm install aisolate chart -n aisolate -f values.yaml`. The values file carries every
@@ -72,7 +72,7 @@ no ConfigMap; the Roles bounded to what each component does. After an intended c
 what they compare against. You need `helm` and `yq`; `README_GENERATOR_BIN` names the readme generator (a build
 of readme-generator-for-helm with the strict schema and the `noReadme` modifier), without which the docs check
 is skipped. CI runs the same script on a public image with checksum-verified `helm` and `yq`, and packages the
-chart into the registry on a tag `v<version>`.
+chart as a release on a tag `v<version>`.
 
 ## Conventions
 
