@@ -1,5 +1,8 @@
 {
   "realm": {{ .Values.platform.keycloak.realms.operators.name | quote }},
+  {{- with .Values.platform.keycloak.realms.operators.loginTheme }}
+  "loginTheme": {{ . | quote }},
+  {{- end }}
   "enabled": true,
   "displayName": "AIsolate",
   "sslRequired": "external",

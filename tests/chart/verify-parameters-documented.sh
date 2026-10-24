@@ -8,7 +8,8 @@ cd "$ROOT_DIR"
 export LC_ALL=C
 
 # Image blocks and .Values.global are handed over whole.
-USED_PARAMETERS=$(grep -ohR '\.Values\.[.A-Za-z0-9_-]*' chart/templates | \
+# chart/files holds the realms tpl renders, which read values too.
+USED_PARAMETERS=$(grep -ohR '\.Values\.[.A-Za-z0-9_-]*' chart/templates chart/files | \
   sed -E 's/^\.Values\.//' | \
   grep -v -E '\.image(\.[A-Za-z]+)?$|^global$' | \
   sort -u)

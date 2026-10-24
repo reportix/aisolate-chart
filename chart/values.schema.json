@@ -780,6 +780,11 @@
                                             "type": "string",
                                             "description": "The operators' realm: the AIsolate UI (client aisolate-ui) and the CLI (aisolate-cli) sign in there; its realm roles aisolate-admin and aisolate-auditor",
                                             "default": "aisolate"
+                                        },
+                                        "loginTheme": {
+                                            "type": "string",
+                                            "description": "The realm's login theme, one the image carries (aisolate-ui in the themed image); empty: Keycloak's own. Imported with the realm: an existing instance takes a new one through the admin console, or with a recreated claim",
+                                            "default": ""
                                         }
                                     }
                                 },
@@ -791,6 +796,11 @@
                                             "type": "string",
                                             "description": "The application users' realm: the chat (client aisolate-chat, and any client it registers from platform.chat.host) signs its users in there; the roles the rules name are its realm roles",
                                             "default": "acme"
+                                        },
+                                        "loginTheme": {
+                                            "type": "string",
+                                            "description": "The realm's login theme, one the image carries (aisolate in the themed image); empty: Keycloak's own; imported with the realm like the operators'",
+                                            "default": ""
                                         }
                                     }
                                 }

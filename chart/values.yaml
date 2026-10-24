@@ -302,9 +302,13 @@ platform:
       operators:
         ## @param platform.keycloak.realms.operators.name The operators' realm: the AIsolate UI (client aisolate-ui) and the CLI (aisolate-cli) sign in there; its realm roles aisolate-admin and aisolate-auditor
         name: aisolate
+        ## @param platform.keycloak.realms.operators.loginTheme The realm's login theme, one the image carries (aisolate-ui in the themed image); empty: Keycloak's own. Imported with the realm: an existing instance takes a new one through the admin console, or with a recreated claim
+        loginTheme: ""
       users:
         ## @param platform.keycloak.realms.users.name The application users' realm: the chat (client aisolate-chat, and any client it registers from platform.chat.host) signs its users in there; the roles the rules name are its realm roles
         name: acme
+        ## @param platform.keycloak.realms.users.loginTheme The realm's login theme, one the image carries (aisolate in the themed image); empty: Keycloak's own; imported with the realm like the operators'
+        loginTheme: ""
     ## @param platform.keycloak.demoUsers Create the demo cast at the first start (operators realm: admin, developer, auditor; users realm: jane the CEO, john the employee, auditor, with those realm roles), each with their password from the Secret
     demoUsers: false
     ## @param platform.keycloak.existingSecret A Secret you create with Keycloak's admin password under the key admin-password (the demo admin's too) and, with demoUsers, developer-password, auditor-password, jane-password and john-password; empty: the chart generates the Secret keycloak with those keys and keeps it with lookup (set one for a render without a cluster, see persistence.postgres.existingSecret)
