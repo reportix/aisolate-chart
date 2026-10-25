@@ -30,8 +30,11 @@ render() {
     name=$(basename "$values" .yaml)
     name=${name%-values}
     name=${name#values-}
+    # The examples carry no AIsolate digests (a release pins them): their goldens take tests/chart/example-digests.yaml.
+    set -- --values "$values"
+    case $values in chart/examples/*) set -- --values tests/chart/example-digests.yaml "$@" ;; esac
     # The database password, the audit ingest key, the credentials key and Keycloak's passwords are random per render: the goldens keep their place, not their value.
-    helm template aisolate chart --namespace aisolate --values "$values" \
+    helm template aisolate chart --namespace aisolate "$@" \
       | yq '... comments="" | (select(.kind == "Secret" and .metadata.name == "db") | .data.password) = "generated"
           | (select(.kind == "Secret" and .metadata.name == "audit-ingest") | .data.key) = "generated"
           | (select(.kind == "Secret" and .metadata.name == "credentials-key") | .data.key) = "generated"

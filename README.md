@@ -81,15 +81,15 @@ to the public Helm repository on a tag `<version>`, and every commit on the defa
 ## Releasing
 
 1. Tag the release in the app repository (`aisolate/aisolate`); its pipeline publishes the images to
-   `docker-public.sonatype.reportix.com`.
+   `docker-public.sonatype.reportix.com`. It needs a tag made after the app repository's docs and release-CI
+   changes (`crds/` at its root, images on docker-public): the script cannot pin an older one.
 2. Run `scripts/pin-release.sh <appVersion>` (`--dry-run` first): it writes every AIsolate image's digest,
    `appVersion` and the CRDs of that tag, and writes nothing while an image is missing; an unpublished UI or chat
    image only warns and keeps its empty digest. Then run `tests/chart/regenerate.sh`: the parameter table shows the
-   digests. The first pin's merge request also drops the placeholder digests from
-   `chart/examples/example-values.yaml`, which would override the chart's.
+   digests.
 3. Open the merge request; like every one, it bumps `version` in `chart/Chart.yaml`.
-4. Once it is merged, tag `main` with the chart's `version`, bare semver without a `v`: CI publishes the chart to
-   the public Helm repository.
+4. Once it is merged, tag `main` with the chart's `version`, bare semver without a `v`: CI checks the pins
+   (`scripts/pin-release.sh --check`) and publishes the chart to the public Helm repository.
 
 ## Conventions
 
