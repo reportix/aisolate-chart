@@ -9,7 +9,7 @@
 
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 
-The Helm chart that installs [AIsolate](https://gitlab.reportix.com/aisolate/control-plane) on Kubernetes:
+The Helm chart that installs [AIsolate](https://github.com/reportix/aisolate) on Kubernetes:
 governed model endpoints over the organisation's own databases. The chart is `chart/`, its tests are
 `tests/chart/`.
 
@@ -27,10 +27,10 @@ backend's PostgreSQL, a database on a PersistentVolumeClaim that only the backen
 application users, so that a cluster without an identity provider is complete.
 
 What the controller renders per airlock, how the two kinds of install differ and what the cluster, the identity
-provider, the databases and the model server must provide is the control plane's documentation:
-[install](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/install.md),
-[release](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/release.md) and
-[concepts](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/concepts.md).
+provider, the databases and the model server must provide is AIsolate's documentation:
+[install](https://github.com/reportix/aisolate/blob/main/docs/install.md),
+[release](https://github.com/reportix/aisolate/blob/main/docs/release.md) and
+[concepts](https://github.com/reportix/aisolate/blob/main/docs/concepts.md).
 
 ## Install
 

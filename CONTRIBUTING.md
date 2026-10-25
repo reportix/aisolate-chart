@@ -3,10 +3,10 @@
 ## Before you start
 
 Read `README.md` and the hand-written part of `chart/README.md`. What the chart installs and what the cluster must
-provide is the control plane's documentation
-([concepts](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/concepts.md),
-[install](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/install.md),
-[release](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/release.md)). A change to the
+provide is AIsolate's documentation
+([concepts](https://github.com/reportix/aisolate/blob/main/docs/concepts.md),
+[install](https://github.com/reportix/aisolate/blob/main/docs/install.md),
+[release](https://github.com/reportix/aisolate/blob/main/docs/release.md)). A change to the
 chart's behaviour updates `chart/README.md` in the same merge request.
 
 ## Checks

@@ -70,7 +70,7 @@ Start from `examples/example-values.yaml`:
 With the AIsolate UI, also set `platform.frontend.host` and `platform.backend.host`. The UI image
 carries the backend's URL and the operators' identity provider (the realm the dashboard signs in to) from its build
 (`NEXT_PUBLIC_AISOLATE_URL` and `NEXT_PUBLIC_OIDC_AUTHORITY`, build args of the UI's Dockerfile in the
-control plane repository), so build it for those hosts.
+`aisolate` repository), so build it for those hosts.
 
 For a private registry, `global.imageRegistry` reaches every image, the controller's pods included.
 `global.imagePullSecrets` reaches only the chart's own pods. The airlock and tool server pods run as the
@@ -148,8 +148,8 @@ reach the ingest port; no Ingress routes to it.
   whole. The lines are only as durable as the backend's database (its PersistentVolumeClaim `db`): back it up.
 
 Headless installs have no backend: the airlock pods print the lines to stdout alone, whatever `stdout` says, and
-nothing fails closed. What a line holds and how the chain is checked: the control plane's
-[audit documentation](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/audit.md).
+nothing fails closed. What a line holds and how the chain is checked: AIsolate's
+[audit documentation](https://github.com/reportix/aisolate/blob/main/docs/audit.md).
 
 # Credentials
 
@@ -208,8 +208,8 @@ recommend, all Apache-2.0: the OpenTelemetry Collector in front of Jaeger for th
   `platform.metrics.egress`, Monitoring also has a **Metrics** tab: the dashboard's five panels, from fixed
   queries the backend runs, each caller's spaces alone. It needs the `space` label on the series (below).
 
-What the spans and the series hold, and never hold: the control plane's
-[observability documentation](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/observability.md).
+What the spans and the series hold, and never hold: AIsolate's
+[observability documentation](https://github.com/reportix/aisolate/blob/main/docs/observability.md).
 
 # Uninstallation
 

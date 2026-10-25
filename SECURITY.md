@@ -2,8 +2,8 @@
 
 AIsolate's job is to keep a model from seeing or returning what the asking user may not see. This chart
 installs the pods that enforce that and the policies that isolate them; a render that weakens either is a
-vulnerability, whatever the component. Where each guarantee is enforced: the control plane's
-[security documentation](https://gitlab.reportix.com/aisolate/control-plane/-/blob/main/docs/security.md).
+vulnerability, whatever the component. Where each guarantee is enforced: AIsolate's
+[security documentation](https://github.com/reportix/aisolate/blob/main/docs/security.md).
 
 ## What counts
 
