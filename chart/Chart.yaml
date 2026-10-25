@@ -7,9 +7,9 @@ description: >-
   and its plane; with platform.chat.enabled the AIsolate chat; with platform.keycloak.enabled a Keycloak of its
   own with the two realms.
 type: application
-home: https://github.com/reportix/aisolate-charts
+home: https://github.com/reportix/aisolate-chart
 sources:
-  - https://github.com/reportix/aisolate-charts
+  - https://github.com/reportix/aisolate-chart
   - https://github.com/reportix/aisolate
 annotations:
   artifacthub.io/license: AGPL-3.0-only

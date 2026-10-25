@@ -3,7 +3,7 @@
 AIsolate serves governed model endpoints over the organisation's own databases. This chart installs the custom resource
 definitions (`Space` and `Airlock` of `aisolate.dev/v1`), the controller that turns them into airlock pods and tool server pods,
 and the namespace's policies. How to install it and which values to set: the
-[repository README](https://github.com/reportix/aisolate-charts#readme).
+[repository README](https://github.com/reportix/aisolate-chart#readme).
 
 - `headless=true`, the default: no UI.
 - `headless=false`: the AIsolate UI as well: its frontend, its backend (the UI's API and the CLI's endpoint) and the backend's
