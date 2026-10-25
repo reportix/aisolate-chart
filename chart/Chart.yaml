@@ -13,7 +13,7 @@ sources:
   - https://gitlab.reportix.com/aisolate/control-plane
 annotations:
   artifacthub.io/license: AGPL-3.0-only
-version: 0.1.1
+version: 0.1.2
 appVersion: "0.1.0"
 kubeVersion: ">=1.29.0-0"
 keywords: [aisolate, airlock, llm, governance]

@@ -42,11 +42,11 @@ kubectl create namespace aisolate
 kubectl label namespace aisolate pod-security.kubernetes.io/enforce=restricted
 ```
 
-Every tag `v<version>` publishes the packaged chart with a GitLab release of this project:
+Every tag `<version>` publishes the packaged chart to the public Helm repository:
 
 ```bash
-helm install aisolate \
-  'https://gitlab.reportix.com/aisolate/charts/-/jobs/artifacts/v0.1.1/raw/aisolate-0.1.1.tgz?job=chart-publish' -n aisolate --create-namespace -f values.yaml
+helm repo add aisolate https://sonatype.reportix.com/repository/helm-public
+helm install aisolate aisolate/aisolate --version <version> -n aisolate --create-namespace -f values.yaml
 ```
 
 From a checkout, `helm install aisolate chart -n aisolate -f values.yaml`. The values file carries every
@@ -71,8 +71,9 @@ image by digest; the network opened to each component's peers alone; the generat
 no ConfigMap; the Roles bounded to what each component does. After an intended change, `regenerate.sh` rewrites
 what they compare against. You need `helm` and `yq`; `README_GENERATOR_BIN` names the readme generator (a build
 of readme-generator-for-helm with the strict schema and the `noReadme` modifier), without which the docs check
-is skipped. CI runs the same script on a public image with checksum-verified `helm` and `yq`, and packages the
-chart as a release on a tag `v<version>`.
+is skipped. CI runs the same script on a public image with checksum-verified `helm` and `yq`, publishes the chart
+to the public Helm repository on a tag `<version>`, and every commit on the default branch to the internal one as
+`<version>-<sha10>`.
 
 ## Conventions
 

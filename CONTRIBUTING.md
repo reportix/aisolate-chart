@@ -23,7 +23,8 @@ parameter a template reads is documented and every documented one read, that the
 `tests/chart/regenerate.sh` rewrites the table, the schema and the goldens; read the diff of the goldens, it is
 the review of the render. A new behaviour gets an invariant in `tests/chart/verify-render-invariants.sh` that
 fails when it breaks; a fix without one is not finished. CI (`.gitlab-ci.yml`) runs `test.sh` on every push and,
-on a tag `v<version>` that names `Chart.yaml`'s version, packages the chart into this project's Helm registry.
+on a tag `<version>` that names `Chart.yaml`'s version, publishes the chart to the public Helm repository. Every
+merge request bumps `version` in `chart/Chart.yaml`: CI's `verify-version` job fails a branch that does not.
 
 ## Repository layout
 

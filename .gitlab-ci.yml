@@ -1,5 +1,19 @@
-# Chart checks on every push; on a tag v<version>, the package in this project's Helm registry. Public images only.
-stages: [test, publish]
+# test_render checks the chart on every push, on a public image. Reportix's release component publishes it:
+# every commit on main to helm-internal as <version>-<sha10>, a bare semver tag X.Y.Z equal to Chart.yaml's
+# version to the world-readable helm-public after verify-release; verify-version makes every branch bump the
+# version. chart_image_gate stays off: it does not understand digest pins.
+include:
+  - component: $CI_SERVER_FQDN/reportix/ci-templates/release@1
+    inputs:
+      image: docker-internal.sonatype.reportix.com/reportix/ci-images/generic:latest
+      release_channel: public
+      chart_names: aisolate
+      declared_version_command: "yq '.version' chart/Chart.yaml"
+      internal_publish_command: 'helm-publish.sh --chart-dir chart --version "$RESOLVED_VERSION" --on-conflict overwrite --repo-url https://sonatype.reportix.com/repository/helm-${PUBLISH_CHANNEL}'
+      release_publish_command: 'helm-publish.sh --chart-dir chart --on-conflict fail --repo-url https://sonatype.reportix.com/repository/helm-${PUBLISH_CHANNEL}'
+      version_gate: increase
+
+stages: [test, publish-internal, publish-release]
 
 .helm:
   image: debian:bookworm-slim
@@ -28,21 +42,3 @@ test_render:
     paths:
       - tests/chart/actual-results
     expire_in: 1 week
-
-chart-publish:
-  extends: .helm
-  stage: publish
-  rules:
-    - if: $CI_COMMIT_TAG
-  script:
-    # The tag names Chart.yaml's version: v0.1.0 publishes aisolate-0.1.0.tgz as a release.
-    - test "$(yq .version chart/Chart.yaml)" = "${CI_COMMIT_TAG#v}" || { echo "tag $CI_COMMIT_TAG is not Chart.yaml's version $(yq .version chart/Chart.yaml)" >&2; exit 1; }
-    - helm package chart
-    # The package stays with the pipeline (artifacts never expire) and the release links to it.
-    - |
-      curl --fail --silent --request POST --header "JOB-TOKEN: $CI_JOB_TOKEN" --header "Content-Type: application/json" \
-        --data "{\"tag_name\": \"$CI_COMMIT_TAG\", \"name\": \"aisolate chart $CI_COMMIT_TAG\", \"assets\": {\"links\": [{\"name\": \"aisolate-${CI_COMMIT_TAG#v}.tgz\", \"url\": \"$CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_TAG/raw/aisolate-${CI_COMMIT_TAG#v}.tgz?job=chart-publish\", \"link_type\": \"package\"}]}}" \
-        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/releases" > /dev/null
-  artifacts:
-    paths: [aisolate-*.tgz]
-    expire_in: never
