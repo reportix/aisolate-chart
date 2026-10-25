@@ -20,7 +20,7 @@ spec:
         # The settings file: a change rolls the controller, and the backend cannot write a pod template.
         aisolate.dev/settings: {{ include "aisolate.controllerSettings" . | quote }}
         {{- if not .Values.headless }}
-        {{- include "aisolate.auditIngestKeyChecksum" . | nindent 8 }}
+        {{- include "aisolate.rollOn" (dict "root" $ "name" "audit" "existing" .Values.platform.audit.existingSecret) | nindent 8 }}
         {{- end }}
     spec:
       {{- include "aisolate.scheduling" . | nindent 6 }}

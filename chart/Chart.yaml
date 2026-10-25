@@ -17,7 +17,3 @@ version: 0.1.2
 appVersion: "0.1.0"
 kubeVersion: ">=1.29.0-0"
 keywords: [aisolate, airlock, llm, governance]
-dependencies:
-  - name: common
-    repository: oci://registry-1.docker.io/bitnamicharts
-    version: 2.41.0

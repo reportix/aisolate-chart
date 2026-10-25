@@ -100,7 +100,7 @@ to the public Helm repository on a tag `<version>`, and every commit on the defa
   folders (`platform.backend` ↔ `templates/platform/backend/`).
 - Every value a template reads has a `## @param` line, and every `@param` is read. No `.Values.` in
   template comments.
-- Images use the common image block (`registry`, `repository`, `tag`, `digest`, `pullPolicy`, `pullSecrets`). An
+- Images use the common image block (`registry`, `repository`, `tag`, `digest`, `pullPolicy`). An
   empty tag means the chart's `appVersion`. Without `allowTags`, a tag-only image fails the render. The AIsolate
   images but the UI and the chat default to `docker-public.sonatype.reportix.com`, their digests written by
   `scripts/pin-release.sh` (the UI's and the chat's registry and digest are the installer's until they are

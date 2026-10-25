@@ -2,7 +2,7 @@
 # Inside the namespace's default-deny: the browser reaches the chat through the ingress controller. The chat's one
 # server-side call registers it at the identity provider the release host names (RFC 7591): the release host and,
 # behind it, the provider, both fronted by the ingress controller, which is all the chat may reach besides the DNS.
-# ponytail: an identity provider the ingress controller does not front needs its own policy (extraDeploy).
+# Known limit: an identity provider the ingress controller does not front needs its own policy (extraDeploy).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

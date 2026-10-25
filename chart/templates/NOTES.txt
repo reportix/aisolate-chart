@@ -4,8 +4,8 @@ AIsolate {{ .Chart.Version }} in namespace {{ .Release.Namespace }}{{ if .Values
 AIsolate UI   {{ include "aisolate.scheme" . }}://{{ .Values.platform.frontend.host }}
 Backend         {{ include "aisolate.scheme" . }}://{{ .Values.platform.backend.host }}   (the CLI's endpoint)
 {{- else }}
-Create the Secrets the export's secretRefs name (keys username and password), then apply the export,
-its code ConfigMaps included: kubectl apply -f <export> -n {{ .Release.Namespace }}
+Create the Secrets the export's secretRefs name (keys username and password), then apply the export:
+kubectl apply -f <export> -n {{ .Release.Namespace }}
 {{- end }}
 {{- if .Values.platform.chat.enabled }}
 Chat            {{ include "aisolate.scheme" . }}://{{ .Values.platform.chat.host }}   (its origin belongs in platform.airlock.corsAllowedOrigins)

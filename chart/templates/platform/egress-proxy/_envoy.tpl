@@ -1,7 +1,7 @@
 {{/* The one way out to a hostname: CONNECT only, to port 443 only, to these names, every request logged; anything
      else is a 403. Names match :authority literally (exact, case-insensitive; *.suffix: its subdomains; .suffix:
      the name and its subdomains), so an IP-literal CONNECT matches no name. Carried by
-     the proxy's pod template (aisolate.dev/envoy-yaml), which the backend cannot write: its Role writes ConfigMaps. */}}
+     the proxy's pod template (aisolate.dev/envoy-yaml), never a ConfigMap: nobody who may write ConfigMaps rewrites it. */}}
 {{- define "aisolate.envoyYaml" -}}
 {{- $domains := list -}}
 {{- range .Values.platform.egress.proxy.domains -}}

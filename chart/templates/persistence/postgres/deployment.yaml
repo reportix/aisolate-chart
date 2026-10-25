@@ -19,7 +19,7 @@ spec:
       labels:
         app: db
       annotations:
-        {{- include "aisolate.dbPasswordChecksum" . | nindent 8 }}
+        {{- include "aisolate.rollOn" (dict "root" $ "name" "db" "existing" .Values.persistence.postgres.existingSecret) | nindent 8 }}
     spec:
       {{- include "aisolate.scheduling" . | nindent 6 }}
       automountServiceAccountToken: false

@@ -7,17 +7,16 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$ROOT_DIR"
 export LC_ALL=C
 
-# Image blocks and .Values.global are handed over whole.
+# Image blocks are handed over whole.
 # chart/files holds the realms tpl renders, which read values too.
 USED_PARAMETERS=$(grep -ohR '\.Values\.[.A-Za-z0-9_-]*' chart/templates chart/files | \
   sed -E 's/^\.Values\.//' | \
-  grep -v -E '\.image(\.[A-Za-z]+)?$|^global$' | \
+  grep -v -E '\.image(\.[A-Za-z]+)?$' | \
   sort -u)
 
-# global.* is read by the Bitnami common helpers; common is the library chart's own values.
 DOCUMENTED_PARAMETERS=$(grep -oh -E '@(param|extra)[[:space:]]+[.A-Za-z0-9_-]+' chart/values.yaml | \
   sed -E 's/^@(param|extra)[[:space:]]+//' | \
-  grep -v -E '\.image(\.[A-Za-z]+)?$|^common$|^global\.(imageRegistry|imagePullSecrets)$' | \
+  grep -v -E '\.image(\.[A-Za-z]+)?$' | \
   sort -u)
 
 DOCUMENTED_UNUSED=$(comm -13 <(echo "$USED_PARAMETERS") <(echo "$DOCUMENTED_PARAMETERS"))

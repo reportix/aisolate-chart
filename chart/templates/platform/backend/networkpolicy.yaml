@@ -48,43 +48,22 @@ spec:
       {{- end }}
     {{- else }}
     # The identity provider outside the cluster: HTTPS to a public address.
+    {{- include "aisolate.publicEgress" . | nindent 4 }}
+    {{- end }}
+    {{- /* Monitoring's stores, when named: the trace store's query API and Prometheus's HTTP API, each on its peer's port alone. */}}
+    {{- range (list (dict "name" "tracing" "url" .Values.platform.tracing.queryUrl "peer" .Values.platform.tracing.egress) (dict "name" "metrics" "url" .Values.platform.metrics.queryUrl "peer" .Values.platform.metrics.egress)) }}
+    {{- if .url }}
+    {{- $peer := .peer | default dict }}
+    {{- if not (or $peer.cidr $peer.namespaceSelector $peer.podSelector) }}
+    {{- fail (printf "platform.%s.egress: required with platform.%s.queryUrl, the store's peer (namespaceSelector and podSelector, or cidr) and port" .name .name) }}
+    {{- end }}
+    # Monitoring's {{ .name }} store: that peer on that port alone.
     - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 10.0.0.0/8
-              - 172.16.0.0/12
-              - 192.168.0.0/16
-              - 100.64.0.0/10
-              - 127.0.0.0/8
-              - 169.254.0.0/16
+{{ include "aisolate.policyPeer" $peer | indent 8 }}
       ports:
-        - port: 443
+        - port: {{ required (printf "platform.%s.egress.port: required with platform.%s.queryUrl" .name .name) $peer.port }}
           protocol: TCP
     {{- end }}
-    {{- if .Values.platform.tracing.queryUrl }}
-    {{- $store := .Values.platform.tracing.egress | default dict }}
-    {{- if not (or $store.cidr $store.namespaceSelector $store.podSelector) }}
-    {{- fail "platform.tracing.egress: required with platform.tracing.queryUrl, the trace store's peer (namespaceSelector and podSelector, or cidr) and port" }}
-    {{- end }}
-    # The trace store's query API, for Monitoring: that peer on that port alone.
-    - to:
-{{ include "aisolate.policyPeer" $store | indent 8 }}
-      ports:
-        - port: {{ required "platform.tracing.egress.port: required with platform.tracing.queryUrl" $store.port }}
-          protocol: TCP
-    {{- end }}
-    {{- if .Values.platform.metrics.queryUrl }}
-    {{- $prometheus := .Values.platform.metrics.egress | default dict }}
-    {{- if not (or $prometheus.cidr $prometheus.namespaceSelector $prometheus.podSelector) }}
-    {{- fail "platform.metrics.egress: required with platform.metrics.queryUrl, Prometheus's peer (namespaceSelector and podSelector, or cidr) and port" }}
-    {{- end }}
-    # Prometheus's HTTP API, for Monitoring's charts: that peer on that port alone.
-    - to:
-{{ include "aisolate.policyPeer" $prometheus | indent 8 }}
-      ports:
-        - port: {{ required "platform.metrics.egress.port: required with platform.metrics.queryUrl" $prometheus.port }}
-          protocol: TCP
     {{- end }}
     {{- include "aisolate.apiServerEgress" . | nindent 4 }}
 {{- end }}

@@ -20,12 +20,6 @@
                 }
             }
         },
-        "common": {
-            "type": "object",
-            "description": "",
-            "additionalProperties": true,
-            "default": {}
-        },
         "headless": {
             "type": "boolean",
             "description": "Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy. false adds the AIsolate UI (frontend, backend, the backend's database). A bool, never a string",
@@ -85,12 +79,6 @@
                             "type": "string",
                             "description": "helm test's curl image pull policy",
                             "default": "IfNotPresent"
-                        },
-                        "pullSecrets": {
-                            "type": "array",
-                            "description": "helm test's curl image pull Secret names",
-                            "default": [],
-                            "items": {}
                         }
                     }
                 }
@@ -132,12 +120,6 @@
                                     "type": "string",
                                     "description": "Controller image pull policy",
                                     "default": "IfNotPresent"
-                                },
-                                "pullSecrets": {
-                                    "type": "array",
-                                    "description": "Controller image pull Secret names",
-                                    "default": [],
-                                    "items": {}
                                 }
                             }
                         },
@@ -493,12 +475,6 @@
                                             "type": "string",
                                             "description": "Egress proxy image pull policy",
                                             "default": "IfNotPresent"
-                                        },
-                                        "pullSecrets": {
-                                            "type": "array",
-                                            "description": "Egress proxy image pull Secret names",
-                                            "default": [],
-                                            "items": {}
                                         }
                                     }
                                 },
@@ -631,12 +607,6 @@
                                     "type": "string",
                                     "description": "AIsolate UI image pull policy",
                                     "default": "IfNotPresent"
-                                },
-                                "pullSecrets": {
-                                    "type": "array",
-                                    "description": "AIsolate UI image pull Secret names",
-                                    "default": [],
-                                    "items": {}
                                 }
                             }
                         },
@@ -690,12 +660,6 @@
                                     "type": "string",
                                     "description": "Chat image pull policy",
                                     "default": "IfNotPresent"
-                                },
-                                "pullSecrets": {
-                                    "type": "array",
-                                    "description": "Chat image pull Secret names",
-                                    "default": [],
-                                    "items": {}
                                 }
                             }
                         },
@@ -759,12 +723,6 @@
                                     "type": "string",
                                     "description": "Keycloak image pull policy",
                                     "default": "IfNotPresent"
-                                },
-                                "pullSecrets": {
-                                    "type": "array",
-                                    "description": "Keycloak image pull Secret names",
-                                    "default": [],
-                                    "items": {}
                                 }
                             }
                         },
@@ -877,12 +835,6 @@
                                     "type": "string",
                                     "description": "Backend image pull policy",
                                     "default": "IfNotPresent"
-                                },
-                                "pullSecrets": {
-                                    "type": "array",
-                                    "description": "Backend image pull Secret names",
-                                    "default": [],
-                                    "items": {}
                                 }
                             }
                         },
@@ -937,12 +889,6 @@
                                     "type": "string",
                                     "description": "The backend's PostgreSQL image pull policy",
                                     "default": "IfNotPresent"
-                                },
-                                "pullSecrets": {
-                                    "type": "array",
-                                    "description": "The backend's PostgreSQL image pull Secret names",
-                                    "default": [],
-                                    "items": {}
                                 }
                             }
                         },

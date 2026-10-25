@@ -6,9 +6,6 @@ global:
   imageRegistry: ""
   imagePullSecrets: []
 
-## @param common [noReadme]
-common: {}
-
 ## @section Common parameters
 
 ## @param headless Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy. false adds the AIsolate UI (frontend, backend, the backend's database). A bool, never a string
@@ -37,8 +34,6 @@ test:
     digest: sha256:9a1ed35addb45476afa911696297f8e115993df459278ed036182dd2cd22b67b
     ## @param test.image.pullPolicy helm test's curl image pull policy
     pullPolicy: IfNotPresent
-    ## @param test.image.pullSecrets helm test's curl image pull Secret names
-    pullSecrets: []
 
 ## @section Platform
 platform:
@@ -54,8 +49,6 @@ platform:
       digest: ""
       ## @param platform.controller.image.pullPolicy Controller image pull policy
       pullPolicy: IfNotPresent
-      ## @param platform.controller.image.pullSecrets Controller image pull Secret names
-      pullSecrets: []
     ## @param platform.controller.replicas Controller replicas (leader-elected)
     replicas: 1
     ## @param platform.controller.resources [object] Controller container resources (requests, limits), e.g. for a namespace ResourceQuota
@@ -159,7 +152,6 @@ platform:
       rolesClaim: ""
       ## @param platform.identity.operators.egress [object] That provider as a NetworkPolicy peer (same keys as platform.identity.egress); empty: the one above
       egress: {}
-    # Admission reads the roles claim; the UI's developers are typed e-mails.
   egress:
     ## @param platform.egress.dns [object] The cluster DNS as a peer (default: kube-dns in kube-system, port 53): namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required)
     dns:
@@ -193,8 +185,6 @@ platform:
         digest: sha256:ccb37e93d8274a525fe00d67287716dbe3d58bc4237d7627af9e64fae0fd25c8
         ## @param platform.egress.proxy.image.pullPolicy Egress proxy image pull policy
         pullPolicy: IfNotPresent
-        ## @param platform.egress.proxy.image.pullSecrets Egress proxy image pull Secret names
-        pullSecrets: []
       ## @param platform.egress.proxy.resources [object] Egress proxy container resources (requests, limits)
       resources:
         requests: {cpu: 50m, memory: 64Mi}
@@ -250,8 +240,6 @@ platform:
       digest: ""
       ## @param platform.frontend.image.pullPolicy AIsolate UI image pull policy
       pullPolicy: IfNotPresent
-      ## @param platform.frontend.image.pullSecrets AIsolate UI image pull Secret names
-      pullSecrets: []
     ## @param platform.frontend.resources [object] AIsolate UI container resources (requests, limits)
     resources: {}
 
@@ -271,8 +259,6 @@ platform:
       digest: ""
       ## @param platform.chat.image.pullPolicy Chat image pull policy
       pullPolicy: IfNotPresent
-      ## @param platform.chat.image.pullSecrets Chat image pull Secret names
-      pullSecrets: []
     ## @param platform.chat.replicas Chat replicas
     replicas: 1
     ## @param platform.chat.resources [object] Chat container resources (requests, limits)
@@ -296,8 +282,6 @@ platform:
       digest: sha256:29be7252db0a106f1cd2ac17b9a56ff2668073da645638a38b9fc67deeb2d6c4
       ## @param platform.keycloak.image.pullPolicy Keycloak image pull policy
       pullPolicy: IfNotPresent
-      ## @param platform.keycloak.image.pullSecrets Keycloak image pull Secret names
-      pullSecrets: []
     realms:
       operators:
         ## @param platform.keycloak.realms.operators.name The operators' realm: the AIsolate UI (client aisolate-ui) and the CLI (aisolate-cli) sign in there; its realm roles aisolate-admin and aisolate-auditor
@@ -335,8 +319,6 @@ platform:
       digest: ""
       ## @param platform.backend.image.pullPolicy Backend image pull policy
       pullPolicy: IfNotPresent
-      ## @param platform.backend.image.pullSecrets Backend image pull Secret names
-      pullSecrets: []
     ## @param platform.backend.resources [object] Backend container resources (requests, limits)
     resources: {}
     ## @param platform.backend.maxArtifactSize Largest project artifact (a jar or a Python zip) a deploy may bring, as Spring reads a size (500MB, 2GB); empty: no limit. The pods fetch it from the backend at start
@@ -356,8 +338,6 @@ persistence:
       digest: sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
       ## @param persistence.postgres.image.pullPolicy The backend's PostgreSQL image pull policy
       pullPolicy: IfNotPresent
-      ## @param persistence.postgres.image.pullSecrets The backend's PostgreSQL image pull Secret names
-      pullSecrets: []
     ## @param persistence.postgres.resources [object] The backend's PostgreSQL container resources (requests, limits)
     resources: {}
     ## @param persistence.postgres.existingSecret A Secret you create with the database password under the key password; empty: the chart generates the Secret db and keeps it with lookup, which a render without a cluster (Argo CD, helm template | kubectl apply) cannot see, so every sync makes a new password the kept database refuses: set one there

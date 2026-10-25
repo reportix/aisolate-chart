@@ -1,86 +1,52 @@
 {{/*
 An image reference: by digest (sha256: and 64 hex digits), or by tag when allowTags is on; anything else fails
-the render.
+the render. The tag is the chart's appVersion when empty, the registry is global.imageRegistry when that is set.
 {{ include "aisolate.image" (dict "imageRoot" .Values.platform.controller.image "context" $) }}
 */}}
 {{- define "aisolate.image" -}}
-{{- $ctx := .context -}}
-{{- if and .imageRoot.digest (not (regexMatch "^sha256:[a-f0-9]{64}$" .imageRoot.digest)) -}}
-{{ fail (printf "image %s: digest %q is not sha256: and 64 hex digits" .imageRoot.repository .imageRoot.digest) }}
+{{- $r := .imageRoot -}}
+{{- if and $r.digest (not (regexMatch "^sha256:[a-f0-9]{64}$" $r.digest)) -}}
+{{ fail (printf "image %s: digest %q is not sha256: and 64 hex digits" $r.repository $r.digest) }}
 {{- end -}}
-{{- if or .imageRoot.digest $ctx.Values.allowTags -}}
-{{ include "common.images.image" (dict "imageRoot" .imageRoot "global" $ctx.Values.global "chart" $ctx.Chart) }}
-{{- else -}}
-{{ fail (printf "image %s needs a digest (allowTags=false: a tag-only image never ships)" .imageRoot.repository) }}
+{{- if not (or $r.digest .context.Values.allowTags) -}}
+{{ fail (printf "image %s needs a digest (allowTags=false: a tag-only image never ships)" $r.repository) }}
 {{- end -}}
+{{- $registry := .context.Values.global.imageRegistry | default $r.registry -}}
+{{- if $registry }}{{ $registry }}/{{ end }}{{ $r.repository }}{{ if $r.digest }}@{{ $r.digest }}{{ else }}:{{ $r.tag | default .context.Chart.AppVersion }}{{ end -}}
 {{- end -}}
 
-{{/* The pull Secrets of the chart's own pods: the global ones and every image's. */}}
+{{/* The pull Secrets of the chart's own pods: global.imagePullSecrets, names or {name: …} entries. */}}
 {{- define "aisolate.imagePullSecrets" -}}
-{{- include "common.images.renderPullSecrets" (dict "images" (list
-    .Values.platform.controller.image
-    .Values.platform.egress.proxy.image
-    .Values.platform.frontend.image
-    .Values.platform.chat.image
-    .Values.platform.keycloak.image
-    .Values.platform.backend.image
-    .Values.persistence.postgres.image
-    .Values.test.image
-  ) "context" $) -}}
+{{- with .Values.global.imagePullSecrets -}}
+imagePullSecrets:
+{{- range . }}
+  - name: {{ if kindIs "map" . }}{{ .name }}{{ else }}{{ . }}{{ end }}
+{{- end }}
+{{- end }}
 {{- end -}}
 
-{{/* The backend database's password: the existing Secret's on an upgrade, else a new random one. Kept on the
-     root context, so the Secret and both pods' checksum agree within one render. */}}
-{{- define "aisolate.dbPassword" -}}
-{{- if not (hasKey . "aisolateDbPassword") -}}
-{{- $data := (lookup "v1" "Secret" .Release.Namespace "db").data | default dict -}}
-{{- $_ := set . "aisolateDbPassword" (ternary (index $data "password" | default "" | b64dec) (randAlphaNum 32) (hasKey $data "password")) -}}
+{{/* The keys the chart generates, each kept across upgrades: the existing Secret's on an upgrade, else a new random one. Kept
+     on the root context, so the Secret and every pod's checksum agree within one render. .name: db (the backend database's
+     password), audit (the ingest key: the controller derives each airlock's token from it, the backend checks it) or
+     credentials (what the backend seals typed API keys and passwords with). */}}
+{{- define "aisolate.generated" -}}
+{{- $r := index (dict
+    "db" (dict "secret" "db" "key" "password" "length" 32)
+    "audit" (dict "secret" "audit-ingest" "key" "key" "length" 48)
+    "credentials" (dict "secret" "credentials-key" "key" "key" "length" 64)) .name -}}
+{{- $id := print "aisolateGenerated" .name -}}
+{{- if not (hasKey .root $id) -}}
+{{- $data := (lookup "v1" "Secret" .root.Release.Namespace $r.secret).data | default dict -}}
+{{- $_ := set .root $id (ternary (index $data $r.key | default "" | b64dec) (randAlphaNum (int $r.length)) (hasKey $data $r.key)) -}}
 {{- end -}}
-{{- index . "aisolateDbPassword" -}}
-{{- end -}}
-
-{{/* The audit ingest key (headless=false): the existing Secret's on an upgrade, else a new random one, kept on the
-     root context like the database's password. The controller derives each airlock's ingest token from it, the
-     backend checks a line's token against it. */}}
-{{- define "aisolate.auditIngestKey" -}}
-{{- if not (hasKey . "aisolateAuditIngestKey") -}}
-{{- $data := (lookup "v1" "Secret" .Release.Namespace "audit-ingest").data | default dict -}}
-{{- $_ := set . "aisolateAuditIngestKey" (ternary (index $data "key" | default "" | b64dec) (randAlphaNum 48) (hasKey $data "key")) -}}
-{{- end -}}
-{{- index . "aisolateAuditIngestKey" -}}
+{{- index .root $id -}}
 {{- end -}}
 
-{{/* Rolls the controller and the backend together when the ingest key changes: both must hold the same one; an
-     existingSecret is the installer's to rotate, and the chart cannot read it. */}}
-{{- define "aisolate.auditIngestKeyChecksum" -}}
-{{- if not .Values.platform.audit.existingSecret -}}
-checksum/audit-ingest-key: {{ include "aisolate.auditIngestKey" . | sha256sum | trunc 12 | quote }}
-{{- end -}}
-{{- end -}}
-
-{{/* The credentials key (headless=false): the existing Secret's on an upgrade, else a new random one, kept on the
-     root context like the database's password. The backend seals every typed API key and password under it. */}}
-{{- define "aisolate.credentialsKey" -}}
-{{- if not (hasKey . "aisolateCredentialsKey") -}}
-{{- $data := (lookup "v1" "Secret" .Release.Namespace "credentials-key").data | default dict -}}
-{{- $_ := set . "aisolateCredentialsKey" (ternary (index $data "key" | default "" | b64dec) (randAlphaNum 64) (hasKey $data "key")) -}}
-{{- end -}}
-{{- index . "aisolateCredentialsKey" -}}
-{{- end -}}
-
-{{/* Rolls the backend when the credentials key changes; an existingSecret is the installer's to rotate, and the
-     chart cannot read it. */}}
-{{- define "aisolate.credentialsKeyChecksum" -}}
-{{- if not .Values.platform.credentials.existingSecret -}}
-checksum/credentials-key: {{ include "aisolate.credentialsKey" . | sha256sum | trunc 12 | quote }}
-{{- end -}}
-{{- end -}}
-
-{{/* The pod-template annotation that rolls the database and the backend together when the password changes; an
-     existingSecret is the installer's to rotate, and the chart cannot read it. */}}
-{{- define "aisolate.dbPasswordChecksum" -}}
-{{- if not .Values.persistence.postgres.existingSecret -}}
-checksum/db-password: {{ include "aisolate.dbPassword" . | sha256sum | trunc 12 | quote }}
+{{/* The pod-template annotation that rolls a pod when a generated key changes. An existingSecret is the installer's to rotate,
+     and the chart cannot read it: no annotation then (.existing is that value). */}}
+{{- define "aisolate.rollOn" -}}
+{{- if not .existing -}}
+checksum/{{ index (dict "db" "db-password" "audit" "audit-ingest-key" "credentials" "credentials-key") .name }}: {{ include "aisolate.generated" . | sha256sum | trunc 12 | quote }}
 {{- end -}}
 {{- end -}}
 
@@ -217,6 +183,118 @@ seccompProfile:
     - ipBlock:
         cidr: {{ . | quote }}
   {{- end }}
+{{- end -}}
+
+{{/* The way out to an address: HTTPS to a public one, never to a private, loopback or link-local range. */}}
+{{- define "aisolate.publicEgress" -}}
+- to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+          - 10.0.0.0/8
+          - 172.16.0.0/12
+          - 192.168.0.0/16
+          - 100.64.0.0/10
+          - 127.0.0.0/8
+          - 169.254.0.0/16
+  ports:
+    - port: 443
+      protocol: TCP
+{{- end -}}
+
+{{/* A ClusterIP Service: the pods labelled .selector, on .ports (port, which is also the targetPort; optional name and protocol). */}}
+{{- define "aisolate.service" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  namespace: {{ .context.Release.Namespace }}
+spec:
+  selector:
+    {{- toYaml .selector | nindent 4 }}
+  ports:
+    {{- range .ports }}
+    - {{ with .name }}name: {{ . }}
+      {{ end }}port: {{ .port }}
+      targetPort: {{ .port }}
+      {{- with .protocol }}
+      protocol: {{ . }}
+      {{- end }}
+    {{- end }}
+{{- end -}}
+
+{{/* A PersistentVolumeClaim of one component, on the cluster's default StorageClass unless one is named. */}}
+{{- define "aisolate.pvc" -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .name }}
+  namespace: {{ .context.Release.Namespace }}
+  labels:
+    app: {{ .name }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with .storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .size | quote }}
+{{- end -}}
+
+{{/* A Next.js pod behind an Ingress on 3000 with no ServiceAccount token: the AIsolate UI and the sample chat. */}}
+{{- define "aisolate.web" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  namespace: {{ .context.Release.Namespace }}
+  labels:
+    app: {{ .name }}
+spec:
+  replicas: {{ .replicas }}
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+    spec:
+      {{- include "aisolate.scheduling" .context | nindent 6 }}
+      automountServiceAccountToken: false
+      {{- include "aisolate.imagePullSecrets" .context | nindent 6 }}
+      {{- with .hostAliases }}
+      hostAliases:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsUser: 1000   # the image's `node` user; runAsNonRoot needs the number to verify
+        {{- include "aisolate.podSecurity" .context | nindent 8 }}
+      containers:
+        - name: {{ .name }}
+          image: {{ include "aisolate.image" (dict "imageRoot" .image "context" .context) }}
+          imagePullPolicy: {{ .image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 5
+          {{- with .resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- include "aisolate.containerSecurity" .context | nindent 12 }}
+          volumeMounts:
+            - name: cache
+              mountPath: {{ .cache }}
+      volumes:
+        - name: cache
+          emptyDir: {}
 {{- end -}}
 
 {{/* The ingress rule from the ingress controller (platform.egress.ingressFrom) to one port. */}}

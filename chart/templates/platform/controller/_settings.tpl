@@ -1,6 +1,6 @@
 {{/* What the chart decided at install time and no document carries: the controller renders with it. The file
-     /etc/aisolate/settings.yaml, carried by the controller's pod template (aisolate.dev/settings), which the
-     backend cannot write: its Role writes ConfigMaps. */}}
+     /etc/aisolate/settings.yaml, carried by the controller's pod template (aisolate.dev/settings), never a ConfigMap:
+     nobody who may write ConfigMaps rewrites it. */}}
 {{- define "aisolate.controllerSettings" -}}
 {{- /* Every peer the pods reach names its port; ingressFrom reaches the pods' own. */ -}}
 {{- with .Values.platform.identity.egress }}{{ $_ := required "platform.identity.egress.port is required" .port }}{{ end -}}

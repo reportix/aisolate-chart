@@ -1,13 +1,3 @@
 {{- if not .Values.headless }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: db
-  namespace: {{ .Release.Namespace }}
-spec:
-  selector:
-    app: db
-  ports:
-    - port: 5432
-      targetPort: 5432
+{{ include "aisolate.service" (dict "name" "db" "selector" (dict "app" "db") "ports" (list (dict "port" 5432)) "context" $) }}
 {{- end }}

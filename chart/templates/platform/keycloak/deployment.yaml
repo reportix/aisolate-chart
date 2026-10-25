@@ -1,7 +1,8 @@
 {{- if .Values.platform.keycloak.enabled }}
 # The chart's Keycloak, a demo and trial identity provider: the stock image, its file database on the
-# PersistentVolumeClaim keycloak, the two realms imported at the first start. Its hostname is the public one, so every
-# token carries the issuer the browser used; the pods fetch the keys through its Service.
+# PersistentVolumeClaim keycloak, the two realms imported at the first start (files/keycloak: a file per realm, and
+# client-scopes.json, Keycloak's stock client scopes with AIsolate's audience scope, which both carry). Its hostname is
+# the public one, so every token carries the issuer the browser used; the pods fetch the keys through its Service.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

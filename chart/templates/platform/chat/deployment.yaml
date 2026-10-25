@@ -1,55 +1,5 @@
 {{- if .Values.platform.chat.enabled }}
 # The AIsolate chat, the sample client: it reaches the airlock pods through the release host, as a customer's
 # chat would. The image carries that URL from its build (NEXT_PUBLIC_AISOLATE_URL).
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: chat
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: chat
-spec:
-  replicas: {{ .Values.platform.chat.replicas }}
-  selector:
-    matchLabels:
-      app: chat
-  template:
-    metadata:
-      labels:
-        app: chat
-    spec:
-      {{- include "aisolate.scheduling" . | nindent 6 }}
-      automountServiceAccountToken: false
-      {{- include "aisolate.imagePullSecrets" . | nindent 6 }}
-      {{- with .Values.platform.chat.hostAliases }}
-      hostAliases:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      securityContext:
-        runAsUser: 1000   # the image's `node` user; runAsNonRoot needs the number to verify
-        {{- include "aisolate.podSecurity" . | nindent 8 }}
-      containers:
-        - name: chat
-          image: {{ include "aisolate.image" (dict "imageRoot" .Values.platform.chat.image "context" $) }}
-          imagePullPolicy: {{ .Values.platform.chat.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: 3000
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 3000
-            periodSeconds: 5
-          {{- with .Values.platform.chat.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          securityContext:
-            {{- include "aisolate.containerSecurity" . | nindent 12 }}
-          volumeMounts:
-            - name: cache
-              mountPath: /app/apps/chat/.next/cache
-      volumes:
-        - name: cache
-          emptyDir: {}
+{{ include "aisolate.web" (dict "name" "chat" "replicas" .Values.platform.chat.replicas "image" .Values.platform.chat.image "resources" .Values.platform.chat.resources "hostAliases" .Values.platform.chat.hostAliases "cache" "/app/apps/chat/.next/cache" "context" $) }}
 {{- end }}

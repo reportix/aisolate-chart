@@ -1,14 +1,3 @@
 {{- if .Values.platform.egress.proxy.domains }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: egress
-  namespace: {{ .Release.Namespace }}
-spec:
-  selector:
-    aisolate.dev/role: egress-proxy
-  ports:
-    - name: proxy
-      port: 3128
-      targetPort: 3128
+{{ include "aisolate.service" (dict "name" "egress" "selector" (dict "aisolate.dev/role" "egress-proxy") "ports" (list (dict "name" "proxy" "port" 3128)) "context" $) }}
 {{- end }}

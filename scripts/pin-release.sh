@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 
 app_repo=git@ssh.gitlab.reportix.com:aisolate/aisolate.git
 required="controller airlock toolServer airlockPython toolServerPython backend"
-# ponytail: the UI and the chat bake their deployment's URLs in at build, so an installer builds them. They stay
+# Known limit: the UI and the chat bake their deployment's URLs in at build, so an installer builds them. They stay
 # optional, with an empty registry by default, until they are published generically; then default their registry
 # to docker-public.sonatype.reportix.com and make them required.
 optional="frontend chat"
@@ -30,7 +30,7 @@ for key in $required $optional; do
     reason="platform.$key.image.registry is empty"
   else
     url="https://$registry/v2/$repository/manifests/$version"
-    # ponytail: anonymous HEAD, which docker-public answers today; add the Bearer token flow if it starts asking.
+    # Known limit: anonymous HEAD, which docker-public answers today; add the Bearer token flow if it starts asking.
     headers=$(curl -sSI -H "Accept: $accept" "$url" | tr -d '\r') || true
     # The last status line: a proxy's CONNECT answer comes first.
     status=$(awk '/^HTTP\// { s = $2 } END { print s }' <<<"$headers")

@@ -18,9 +18,9 @@ spec:
       labels:
         app: backend
       annotations:
-        {{- include "aisolate.dbPasswordChecksum" . | nindent 8 }}
-        {{- include "aisolate.auditIngestKeyChecksum" . | nindent 8 }}
-        {{- include "aisolate.credentialsKeyChecksum" . | nindent 8 }}
+        {{- include "aisolate.rollOn" (dict "root" $ "name" "db" "existing" .Values.persistence.postgres.existingSecret) | nindent 8 }}
+        {{- include "aisolate.rollOn" (dict "root" $ "name" "audit" "existing" .Values.platform.audit.existingSecret) | nindent 8 }}
+        {{- include "aisolate.rollOn" (dict "root" $ "name" "credentials" "existing" .Values.platform.credentials.existingSecret) | nindent 8 }}
     spec:
       {{- include "aisolate.scheduling" . | nindent 6 }}
       serviceAccountName: backend

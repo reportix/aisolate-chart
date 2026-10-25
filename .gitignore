@@ -1,5 +1,3 @@
 *.tgz
-!chart/charts/*.tgz
-build/
 tests/chart/actual-results/
 .idea/
