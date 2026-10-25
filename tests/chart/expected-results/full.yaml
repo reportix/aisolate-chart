@@ -1,0 +1,1416 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db
+  namespace: aisolate
+spec:
+  podSelector:
+    matchLabels:
+      app: db
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - port: 5432
+          protocol: TCP
+  egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend
+  namespace: aisolate
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "ingress-nginx"}
+      ports:
+        - port: 8080
+          protocol: TCP
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              aisolate.dev/scraper: "true"
+      ports:
+        - port: 9464
+          protocol: TCP
+    - from:
+        - podSelector:
+            matchLabels:
+              aisolate.dev/role: airlock
+        - podSelector:
+            matchLabels:
+              aisolate.dev/role: tool-server
+      ports:
+        - port: 8085
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "kube-system"}
+          podSelector:
+            matchLabels: {"k8s-app": "kube-dns"}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              app: db
+      ports:
+        - port: 5432
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "aisolate"}
+          podSelector:
+            matchLabels: {"app": "keycloak"}
+      ports:
+        - port: 8080
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "monitoring"}
+          podSelector:
+            matchLabels: {"app": "jaeger"}
+      ports:
+        - port: 16686
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "monitoring"}
+          podSelector:
+            matchLabels: {"app": "prometheus"}
+      ports:
+        - port: 9090
+          protocol: TCP
+    - ports:
+        - port: 443
+          protocol: TCP
+        - port: 6443
+          protocol: TCP
+        - port: 8443
+          protocol: TCP
+      to:
+        - ipBlock:
+            cidr: "10.0.0.1/32"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chat
+  namespace: aisolate
+spec:
+  podSelector:
+    matchLabels:
+      app: chat
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "ingress-nginx"}
+      ports:
+        - port: 3000
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "kube-system"}
+          podSelector:
+            matchLabels: {"k8s-app": "kube-dns"}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "ingress-nginx"}
+      ports:
+        - port: 80
+          protocol: TCP
+        - port: 443
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aisolate-controller
+  namespace: aisolate
+spec:
+  podSelector:
+    matchLabels:
+      aisolate.dev/role: controller
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              aisolate.dev/scraper: "true"
+      ports:
+        - port: 9464
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "kube-system"}
+          podSelector:
+            matchLabels: {"k8s-app": "kube-dns"}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - ports:
+        - port: 443
+          protocol: TCP
+        - port: 6443
+          protocol: TCP
+        - port: 8443
+          protocol: TCP
+      to:
+        - ipBlock:
+            cidr: "10.0.0.1/32"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: egress-proxy
+  namespace: aisolate
+spec:
+  podSelector:
+    matchLabels:
+      aisolate.dev/role: egress-proxy
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 3128
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "kube-system"}
+          podSelector:
+            matchLabels: {"k8s-app": "kube-dns"}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+      ports:
+        - port: 443
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ui
+  namespace: aisolate
+spec:
+  podSelector:
+    matchLabels:
+      app: ui
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "ingress-nginx"}
+      ports:
+        - port: 3000
+          protocol: TCP
+  egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak
+  namespace: aisolate
+spec:
+  podSelector:
+    matchLabels:
+      app: keycloak
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "ingress-nginx"}
+      ports:
+        - port: 8080
+          protocol: TCP
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+        - podSelector:
+            matchExpressions:
+              - key: aisolate.dev/role
+                operator: In
+                values: [airlock, tool-server, discovery]
+      ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: {"kubernetes.io/metadata.name": "kube-system"}
+          podSelector:
+            matchLabels: {"k8s-app": "kube-dns"}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: aisolate
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backend
+  namespace: aisolate
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aisolate-controller
+  namespace: aisolate
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db
+  namespace: aisolate
+type: Opaque
+data:
+  password: "generated"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: audit-ingest
+  namespace: aisolate
+type: Opaque
+data:
+  key: "generated"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: credentials-key
+  namespace: aisolate
+type: Opaque
+data:
+  key: "generated"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak
+  namespace: aisolate
+type: Opaque
+data:
+  admin-password: "generated"
+  developer-password: "generated"
+  auditor-password: "generated"
+  jane-password: "generated"
+  john-password: "generated"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realms
+  namespace: aisolate
+data:
+  realm-operators.json: "{\n  \"realm\": \"aisolate\",\n  \"loginTheme\": \"aisolate-ui\",\n  \"enabled\": true,\n  \"displayName\": \"AIsolate\",\n  \"sslRequired\": \"external\",\n  \"roles\": {\n    \"realm\": [\n      {\n        \"name\": \"aisolate-admin\",\n        \"description\": \"AIsolate UI: creates spaces and names the developers and the roles that may ask; may do everything\"\n      },\n      {\n        \"name\": \"aisolate-auditor\",\n        \"description\": \"AIsolate UI: reads the audit trail and nothing else\"\n      },\n      {\n        \"name\": \"offline_access\",\n        \"description\": \"Offline tokens: the CLI's login outlives the browser session\"\n      }\n    ]\n  },\n  \"clientScopes\": [\n    {\n      \"name\": \"email\",\n      \"description\": \"OpenID Connect built-in scope: email\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${emailScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"email verified\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-property-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"emailVerified\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"email_verified\",\n            \"jsonType.label\": \"boolean\"\n          }\n        },\n        {\n          \"name\": \"email\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"email\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"email\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"offline_access\",\n      \"description\": \"OpenID Connect built-in scope: offline_access\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"consent.screen.text\": \"${offlineAccessScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      }\n    },\n    {\n      \"name\": \"roles\",\n      \"description\": \"OpenID Connect scope for add user roles to the access token\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"consent.screen.text\": \"${rolesScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"audience resolve\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-audience-resolve-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\"\n          }\n        },\n        {\n          \"name\": \"realm roles\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-realm-role-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.attribute\": \"foo\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"realm_access.roles\",\n            \"jsonType.label\": \"String\",\n            \"multivalued\": \"true\"\n          }\n        },\n        {\n          \"name\": \"client roles\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-client-role-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.attribute\": \"foo\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"resource_access.${client_id}.roles\",\n            \"jsonType.label\": \"String\",\n            \"multivalued\": \"true\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"web-origins\",\n      \"description\": \"OpenID Connect scope for add allowed web origins to the access token\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"consent.screen.text\": \"\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"allowed web origins\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-allowed-origins-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"profile\",\n      \"description\": \"OpenID Connect built-in scope: profile\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${profileScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"middle name\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"middleName\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"middle_name\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"picture\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"picture\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"picture\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"full name\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-full-name-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\"\n          }\n        },\n        {\n          \"name\": \"gender\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"gender\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"gender\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"zoneinfo\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"zoneinfo\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"zoneinfo\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"website\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"website\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"website\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"nickname\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"nickname\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"nickname\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"family name\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"lastName\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"family_name\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"updated at\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"updatedAt\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"updated_at\",\n            \"jsonType.label\": \"long\"\n          }\n        },\n        {\n          \"name\": \"locale\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"locale\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"locale\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"username\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"username\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"preferred_username\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"profile\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"profile\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"profile\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"birthdate\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"birthdate\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"birthdate\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"given name\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"firstName\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"given_name\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"basic\",\n      \"description\": \"OpenID Connect scope for add all basic claims to the token\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"sub\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-sub-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\"\n          }\n        },\n        {\n          \"name\": \"auth_time\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usersessionmodel-note-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.session.note\": \"AUTH_TIME\",\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"auth_time\",\n            \"jsonType.label\": \"long\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"acr\",\n      \"description\": \"OpenID Connect scope for add acr (authentication context class reference) to the token\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"acr loa level\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-acr-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"phone\",\n      \"description\": \"OpenID Connect built-in scope: phone\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${phoneScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"phone number verified\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"phoneNumberVerified\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"phone_number_verified\",\n            \"jsonType.label\": \"boolean\"\n          }\n        },\n        {\n          \"name\": \"phone number\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"phoneNumber\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"phone_number\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"saml_organization\",\n      \"description\": \"Organization Membership\",\n      \"protocol\": \"saml\",\n      \"attributes\": {\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"organization\",\n          \"protocol\": \"saml\",\n          \"protocolMapper\": \"saml-organization-membership-mapper\",\n          \"consentRequired\": false,\n          \"config\": {}\n        }\n      ]\n    },\n    {\n      \"name\": \"microprofile-jwt\",\n      \"description\": \"Microprofile - JWT built-in scope\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"upn\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"username\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"upn\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"groups\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-realm-role-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"multivalued\": \"true\",\n            \"user.attribute\": \"foo\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"groups\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"address\",\n      \"description\": \"OpenID Connect built-in scope: address\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${addressScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"address\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-address-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.attribute.formatted\": \"formatted\",\n            \"user.attribute.country\": \"country\",\n            \"introspection.token.claim\": \"true\",\n            \"user.attribute.postal_code\": \"postal_code\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute.street\": \"street\",\n            \"id.token.claim\": \"true\",\n            \"user.attribute.region\": \"region\",\n            \"access.token.claim\": \"true\",\n            \"user.attribute.locality\": \"locality\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"service_account\",\n      \"description\": \"Specific scope for a client enabled for service accounts\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"Client ID\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usersessionmodel-note-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.session.note\": \"client_id\",\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"client_id\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"Client IP Address\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usersessionmodel-note-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.session.note\": \"clientAddress\",\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"clientAddress\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"Client Host\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usersessionmodel-note-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.session.note\": \"clientHost\",\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"clientHost\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"organization\",\n      \"description\": \"Additional claims about the organization a subject belongs to\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${organizationScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"organization\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-organization-membership-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"organization\",\n            \"jsonType.label\": \"String\",\n            \"multivalued\": \"true\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"aisolate\",\n      \"description\": \"Access to AIsolate governed applications (adds aud=aisolate)\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"aisolate-audience\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-audience-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"included.custom.audience\": \"aisolate\",\n            \"id.token.claim\": \"false\",\n            \"access.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\"\n          }\n        }\n      ]\n    }\n  ],\n  \"defaultDefaultClientScopes\": [\n    \"profile\",\n    \"email\",\n    \"roles\",\n    \"web-origins\",\n    \"acr\",\n    \"basic\",\n    \"aisolate\"\n  ],\n  \"defaultOptionalClientScopes\": [\n    \"address\",\n    \"phone\",\n    \"offline_access\",\n    \"microprofile-jwt\",\n    \"organization\"\n  ],\n  \"clients\": [\n    {\n      \"clientId\": \"aisolate-ui\",\n      \"name\": \"AIsolate UI\",\n      \"enabled\": true,\n      \"protocol\": \"openid-connect\",\n      \"publicClient\": true,\n      \"standardFlowEnabled\": true,\n      \"implicitFlowEnabled\": false,\n      \"serviceAccountsEnabled\": false,\n      \"directAccessGrantsEnabled\": true,\n      \"attributes\": {\n        \"pkce.code.challenge.method\": \"S256\",\n        \"post.logout.redirect.uris\": \"https://ui.example.com\"\n      },\n      \"fullScopeAllowed\": true,\n      \"protocolMappers\": [\n        {\n          \"name\": \"realm-roles-in-id-token\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-realm-role-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"claim.name\": \"realm_access.roles\",\n            \"jsonType.label\": \"String\",\n            \"multivalued\": \"true\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\"\n          }\n        }\n      ],\n      \"defaultClientScopes\": [\n        \"web-origins\",\n        \"acr\",\n        \"profile\",\n        \"roles\",\n        \"basic\",\n        \"email\",\n        \"aisolate\"\n      ],\n      \"rootUrl\": \"https://ui.example.com\",\n      \"baseUrl\": \"https://ui.example.com\",\n      \"redirectUris\": [\n        \"https://ui.example.com/*\"\n      ],\n      \"webOrigins\": [\n        \"https://ui.example.com\"\n      ]\n    },\n    {\n      \"clientId\": \"aisolate-cli\",\n      \"name\": \"AIsolate CLI\",\n      \"enabled\": true,\n      \"protocol\": \"openid-connect\",\n      \"publicClient\": true,\n      \"standardFlowEnabled\": true,\n      \"implicitFlowEnabled\": false,\n      \"serviceAccountsEnabled\": false,\n      \"directAccessGrantsEnabled\": false,\n      \"attributes\": {\n        \"pkce.code.challenge.method\": \"S256\"\n      },\n      \"fullScopeAllowed\": true,\n      \"protocolMappers\": [\n        {\n          \"name\": \"realm-roles-in-id-token\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-realm-role-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"claim.name\": \"realm_access.roles\",\n            \"jsonType.label\": \"String\",\n            \"multivalued\": \"true\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\"\n          }\n        }\n      ],\n      \"defaultClientScopes\": [\n        \"web-origins\",\n        \"acr\",\n        \"profile\",\n        \"roles\",\n        \"basic\",\n        \"email\",\n        \"aisolate\"\n      ],\n      \"description\": \"aisolate login: browser sign-in with PKCE and a loopback redirect (RFC 8252)\",\n      \"redirectUris\": [\n        \"http://127.0.0.1/*\"\n      ],\n      \"optionalClientScopes\": [\n        \"offline_access\"\n      ]\n    }\n  ],\n  \"users\": [\n    {\n      \"username\": \"admin\",\n      \"email\": \"admin@example.com\",\n      \"firstName\": \"Admin\",\n      \"lastName\": \"Doe\",\n      \"enabled\": true,\n      \"emailVerified\": true,\n      \"credentials\": [\n        {\n          \"type\": \"password\",\n          \"value\": \"${ADMIN_PASSWORD}\",\n          \"temporary\": false\n        }\n      ],\n      \"realmRoles\": [\n        \"aisolate-admin\"\n      ]\n    },\n    {\n      \"username\": \"developer\",\n      \"email\": \"developer@example.com\",\n      \"firstName\": \"Developer\",\n      \"lastName\": \"Doe\",\n      \"enabled\": true,\n      \"emailVerified\": true,\n      \"credentials\": [\n        {\n          \"type\": \"password\",\n          \"value\": \"${DEVELOPER_PASSWORD}\",\n          \"temporary\": false\n        }\n      ],\n      \"realmRoles\": []\n    },\n    {\n      \"username\": \"auditor\",\n      \"email\": \"auditor@example.com\",\n      \"firstName\": \"Auditor\",\n      \"lastName\": \"Doe\",\n      \"enabled\": true,\n      \"emailVerified\": true,\n      \"credentials\": [\n        {\n          \"type\": \"password\",\n          \"value\": \"${AUDITOR_PASSWORD}\",\n          \"temporary\": false\n        }\n      ],\n      \"realmRoles\": [\n        \"aisolate-auditor\"\n      ]\n    }\n  ]\n}\n"
+  realm-users.json: "{\n  \"realm\": \"acme\",\n  \"loginTheme\": \"aisolate\",\n  \"enabled\": true,\n  \"displayName\": \"Application users\",\n  \"sslRequired\": \"external\",\n  \"clientScopes\": [\n    {\n      \"name\": \"email\",\n      \"description\": \"OpenID Connect built-in scope: email\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${emailScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"email verified\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-property-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"emailVerified\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"email_verified\",\n            \"jsonType.label\": \"boolean\"\n          }\n        },\n        {\n          \"name\": \"email\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"email\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"email\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"offline_access\",\n      \"description\": \"OpenID Connect built-in scope: offline_access\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"consent.screen.text\": \"${offlineAccessScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      }\n    },\n    {\n      \"name\": \"roles\",\n      \"description\": \"OpenID Connect scope for add user roles to the access token\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"consent.screen.text\": \"${rolesScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"audience resolve\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-audience-resolve-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\"\n          }\n        },\n        {\n          \"name\": \"realm roles\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-realm-role-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.attribute\": \"foo\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"realm_access.roles\",\n            \"jsonType.label\": \"String\",\n            \"multivalued\": \"true\"\n          }\n        },\n        {\n          \"name\": \"client roles\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-client-role-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.attribute\": \"foo\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"resource_access.${client_id}.roles\",\n            \"jsonType.label\": \"String\",\n            \"multivalued\": \"true\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"web-origins\",\n      \"description\": \"OpenID Connect scope for add allowed web origins to the access token\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"consent.screen.text\": \"\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"allowed web origins\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-allowed-origins-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"profile\",\n      \"description\": \"OpenID Connect built-in scope: profile\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${profileScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"middle name\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"middleName\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"middle_name\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"picture\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"picture\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"picture\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"full name\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-full-name-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\"\n          }\n        },\n        {\n          \"name\": \"gender\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"gender\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"gender\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"zoneinfo\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"zoneinfo\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"zoneinfo\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"website\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"website\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"website\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"nickname\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"nickname\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"nickname\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"family name\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"lastName\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"family_name\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"updated at\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"updatedAt\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"updated_at\",\n            \"jsonType.label\": \"long\"\n          }\n        },\n        {\n          \"name\": \"locale\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"locale\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"locale\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"username\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"username\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"preferred_username\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"profile\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"profile\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"profile\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"birthdate\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"birthdate\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"birthdate\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"given name\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"firstName\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"given_name\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"basic\",\n      \"description\": \"OpenID Connect scope for add all basic claims to the token\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"sub\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-sub-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\"\n          }\n        },\n        {\n          \"name\": \"auth_time\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usersessionmodel-note-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.session.note\": \"AUTH_TIME\",\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"auth_time\",\n            \"jsonType.label\": \"long\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"acr\",\n      \"description\": \"OpenID Connect scope for add acr (authentication context class reference) to the token\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"acr loa level\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-acr-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"phone\",\n      \"description\": \"OpenID Connect built-in scope: phone\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${phoneScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"phone number verified\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"phoneNumberVerified\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"phone_number_verified\",\n            \"jsonType.label\": \"boolean\"\n          }\n        },\n        {\n          \"name\": \"phone number\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"phoneNumber\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"phone_number\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"saml_organization\",\n      \"description\": \"Organization Membership\",\n      \"protocol\": \"saml\",\n      \"attributes\": {\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"organization\",\n          \"protocol\": \"saml\",\n          \"protocolMapper\": \"saml-organization-membership-mapper\",\n          \"consentRequired\": false,\n          \"config\": {}\n        }\n      ]\n    },\n    {\n      \"name\": \"microprofile-jwt\",\n      \"description\": \"Microprofile - JWT built-in scope\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"upn\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-attribute-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute\": \"username\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"upn\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"groups\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-realm-role-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"introspection.token.claim\": \"true\",\n            \"multivalued\": \"true\",\n            \"user.attribute\": \"foo\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"groups\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"address\",\n      \"description\": \"OpenID Connect built-in scope: address\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${addressScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"address\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-address-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.attribute.formatted\": \"formatted\",\n            \"user.attribute.country\": \"country\",\n            \"introspection.token.claim\": \"true\",\n            \"user.attribute.postal_code\": \"postal_code\",\n            \"userinfo.token.claim\": \"true\",\n            \"user.attribute.street\": \"street\",\n            \"id.token.claim\": \"true\",\n            \"user.attribute.region\": \"region\",\n            \"access.token.claim\": \"true\",\n            \"user.attribute.locality\": \"locality\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"service_account\",\n      \"description\": \"Specific scope for a client enabled for service accounts\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"false\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"Client ID\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usersessionmodel-note-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.session.note\": \"client_id\",\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"client_id\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"Client IP Address\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usersessionmodel-note-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.session.note\": \"clientAddress\",\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"clientAddress\",\n            \"jsonType.label\": \"String\"\n          }\n        },\n        {\n          \"name\": \"Client Host\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usersessionmodel-note-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"user.session.note\": \"clientHost\",\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"clientHost\",\n            \"jsonType.label\": \"String\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"organization\",\n      \"description\": \"Additional claims about the organization a subject belongs to\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"consent.screen.text\": \"${organizationScopeConsentText}\",\n        \"display.on.consent.screen\": \"true\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"organization\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-organization-membership-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"id.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"claim.name\": \"organization\",\n            \"jsonType.label\": \"String\",\n            \"multivalued\": \"true\"\n          }\n        }\n      ]\n    },\n    {\n      \"name\": \"aisolate\",\n      \"description\": \"Access to AIsolate governed applications (adds aud=aisolate)\",\n      \"protocol\": \"openid-connect\",\n      \"attributes\": {\n        \"include.in.token.scope\": \"true\",\n        \"display.on.consent.screen\": \"false\"\n      },\n      \"protocolMappers\": [\n        {\n          \"name\": \"aisolate-audience\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-audience-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"included.custom.audience\": \"aisolate\",\n            \"id.token.claim\": \"false\",\n            \"access.token.claim\": \"true\",\n            \"introspection.token.claim\": \"true\"\n          }\n        }\n      ]\n    }\n  ],\n  \"defaultDefaultClientScopes\": [\n    \"profile\",\n    \"email\",\n    \"roles\",\n    \"web-origins\",\n    \"acr\",\n    \"basic\",\n    \"aisolate\"\n  ],\n  \"defaultOptionalClientScopes\": [\n    \"address\",\n    \"phone\",\n    \"offline_access\",\n    \"microprofile-jwt\",\n    \"organization\"\n  ],\n  \"clients\": [\n    {\n      \"clientId\": \"aisolate-chat\",\n      \"name\": \"AIsolate chat\",\n      \"enabled\": true,\n      \"protocol\": \"openid-connect\",\n      \"publicClient\": true,\n      \"standardFlowEnabled\": true,\n      \"implicitFlowEnabled\": false,\n      \"serviceAccountsEnabled\": false,\n      \"directAccessGrantsEnabled\": true,\n      \"attributes\": {\n        \"pkce.code.challenge.method\": \"S256\",\n        \"post.logout.redirect.uris\": \"https://chat.example.com\"\n      },\n      \"fullScopeAllowed\": true,\n      \"protocolMappers\": [\n        {\n          \"name\": \"realm-roles-in-id-token\",\n          \"protocol\": \"openid-connect\",\n          \"protocolMapper\": \"oidc-usermodel-realm-role-mapper\",\n          \"consentRequired\": false,\n          \"config\": {\n            \"claim.name\": \"realm_access.roles\",\n            \"jsonType.label\": \"String\",\n            \"multivalued\": \"true\",\n            \"id.token.claim\": \"true\",\n            \"access.token.claim\": \"true\",\n            \"userinfo.token.claim\": \"true\"\n          }\n        }\n      ],\n      \"defaultClientScopes\": [\n        \"web-origins\",\n        \"acr\",\n        \"profile\",\n        \"roles\",\n        \"basic\",\n        \"email\",\n        \"aisolate\"\n      ],\n      \"rootUrl\": \"https://chat.example.com\",\n      \"baseUrl\": \"https://chat.example.com\",\n      \"redirectUris\": [\n        \"https://chat.example.com/*\"\n      ],\n      \"webOrigins\": [\n        \"https://chat.example.com\"\n      ]\n    }\n  ],\n  \"components\": {\n    \"org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy\": [\n      {\n        \"name\": \"Trusted Hosts\",\n        \"providerId\": \"trusted-hosts\",\n        \"subType\": \"anonymous\",\n        \"subComponents\": {},\n        \"config\": {\n          \"host-sending-registration-request-must-match\": [\n            \"false\"\n          ],\n          \"client-uris-must-match\": [\n            \"true\"\n          ],\n          \"trusted-hosts\": [\n            \"chat.example.com\"\n          ]\n        }\n      },\n      {\n        \"name\": \"Allowed Client Scopes\",\n        \"providerId\": \"allowed-client-templates\",\n        \"subType\": \"anonymous\",\n        \"subComponents\": {},\n        \"config\": {\n          \"allow-default-scopes\": [\n            \"true\"\n          ],\n          \"allowed-client-scopes\": [\n            \"aisolate\"\n          ]\n        }\n      },\n      {\n        \"name\": \"Allowed Protocol Mapper Types\",\n        \"providerId\": \"allowed-protocol-mappers\",\n        \"subType\": \"anonymous\",\n        \"subComponents\": {},\n        \"config\": {\n          \"allowed-protocol-mapper-types\": [\n            \"oidc-full-name-mapper\",\n            \"oidc-sha256-pairwise-sub-mapper\",\n            \"oidc-address-mapper\",\n            \"saml-user-property-mapper\",\n            \"oidc-usermodel-property-mapper\",\n            \"saml-role-list-mapper\",\n            \"saml-user-attribute-mapper\",\n            \"oidc-usermodel-attribute-mapper\"\n          ]\n        }\n      },\n      {\n        \"name\": \"Max Clients Limit\",\n        \"providerId\": \"max-clients\",\n        \"subType\": \"anonymous\",\n        \"subComponents\": {},\n        \"config\": {\n          \"max-clients\": [\n            \"200\"\n          ]\n        }\n      },\n      {\n        \"name\": \"Allowed Client Scopes\",\n        \"providerId\": \"allowed-client-templates\",\n        \"subType\": \"authenticated\",\n        \"subComponents\": {},\n        \"config\": {\n          \"allow-default-scopes\": [\n            \"true\"\n          ]\n        }\n      },\n      {\n        \"name\": \"Allowed Protocol Mapper Types\",\n        \"providerId\": \"allowed-protocol-mappers\",\n        \"subType\": \"authenticated\",\n        \"subComponents\": {},\n        \"config\": {\n          \"allowed-protocol-mapper-types\": [\n            \"oidc-full-name-mapper\",\n            \"oidc-sha256-pairwise-sub-mapper\",\n            \"oidc-address-mapper\",\n            \"saml-user-property-mapper\",\n            \"oidc-usermodel-property-mapper\",\n            \"saml-role-list-mapper\",\n            \"saml-user-attribute-mapper\",\n            \"oidc-usermodel-attribute-mapper\"\n          ]\n        }\n      }\n    ]\n  },\n  \"roles\": {\n    \"realm\": [\n      {\n        \"name\": \"ceo\",\n        \"description\": \"May ask about every employee's records\"\n      },\n      {\n        \"name\": \"employee\",\n        \"description\": \"May ask about their own records\"\n      },\n      {\n        \"name\": \"auditor\",\n        \"description\": \"May ask every audited company's books\"\n      }\n    ]\n  },\n  \"users\": [\n    {\n      \"username\": \"jane\",\n      \"email\": \"jane@example.com\",\n      \"firstName\": \"Jane\",\n      \"lastName\": \"Doe\",\n      \"enabled\": true,\n      \"emailVerified\": true,\n      \"credentials\": [\n        {\n          \"type\": \"password\",\n          \"value\": \"${JANE_PASSWORD}\",\n          \"temporary\": false\n        }\n      ],\n      \"realmRoles\": [\n        \"ceo\"\n      ]\n    },\n    {\n      \"username\": \"john\",\n      \"email\": \"john@example.com\",\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"enabled\": true,\n      \"emailVerified\": true,\n      \"credentials\": [\n        {\n          \"type\": \"password\",\n          \"value\": \"${JOHN_PASSWORD}\",\n          \"temporary\": false\n        }\n      ],\n      \"realmRoles\": [\n        \"employee\"\n      ]\n    },\n    {\n      \"username\": \"auditor\",\n      \"email\": \"auditor@example.com\",\n      \"firstName\": \"Auditor\",\n      \"lastName\": \"Doe\",\n      \"enabled\": true,\n      \"emailVerified\": true,\n      \"credentials\": [\n        {\n          \"type\": \"password\",\n          \"value\": \"${AUDITOR_PASSWORD}\",\n          \"temporary\": false\n        }\n      ],\n      \"realmRoles\": [\n        \"auditor\"\n      ]\n    }\n  ]\n}\n"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db
+  namespace: aisolate
+  labels:
+    app: db
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: "fast"
+  resources:
+    requests:
+      storage: "8Gi"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: keycloak
+  namespace: aisolate
+  labels:
+    app: keycloak
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: "1Gi"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: backend-apply
+  namespace: aisolate
+rules:
+  - apiGroups: ["aisolate.dev"]
+    resources: ["globals", "spaces", "airlocks"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aisolate-controller
+  namespace: aisolate
+rules:
+  - apiGroups: ["aisolate.dev"]
+    resources: ["globals", "spaces", "airlocks"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["aisolate.dev"]
+    resources: ["globals/status", "spaces/status", "airlocks/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies", "ingresses"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backend-apply
+  namespace: aisolate
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: backend-apply
+subjects:
+  - kind: ServiceAccount
+    name: backend
+    namespace: aisolate
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aisolate-controller
+  namespace: aisolate
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: aisolate-controller
+subjects:
+  - kind: ServiceAccount
+    name: aisolate-controller
+    namespace: aisolate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: aisolate
+spec:
+  selector:
+    app: db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aisolate
+  namespace: aisolate
+spec:
+  selector:
+    aisolate.dev/role: discovery
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: aisolate
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: ingest
+      port: 8085
+      targetPort: 8085
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat
+  namespace: aisolate
+spec:
+  selector:
+    app: chat
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: egress
+  namespace: aisolate
+spec:
+  selector:
+    aisolate.dev/role: egress-proxy
+  ports:
+    - name: proxy
+      port: 3128
+      targetPort: 3128
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui
+  namespace: aisolate
+spec:
+  selector:
+    app: ui
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: aisolate
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: aisolate
+  labels:
+    app: db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+      annotations:
+        checksum/db-password: "generated"
+    spec:
+      nodeSelector:
+        pool: robot
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: robot
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: registry-credentials
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_DB
+              value: aisolate
+            - name: POSTGRES_USER
+              value: aisolate
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: password
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, aisolate, -d, aisolate]
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 1m
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+            - name: socket
+              mountPath: /var/run/postgresql
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: db
+        - name: socket
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: aisolate
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+      annotations:
+        checksum/db-password: "generated"
+        checksum/audit-ingest-key: "generated"
+        checksum/credentials-key: "generated"
+    spec:
+      nodeSelector:
+        pool: robot
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: robot
+      serviceAccountName: backend
+      imagePullSecrets:
+        - name: registry-credentials
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: docker-public.sonatype.reportix.com/aisolate/backend@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: AISOLATE_DB_URL
+              value: "jdbc:postgresql://db:5432/aisolate"
+            - name: AISOLATE_DB_USERNAME
+              value: aisolate
+            - name: AISOLATE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: password
+            - name: AISOLATE_ISSUER_URI
+              value: "https://keycloak.example.com/realms/aisolate"
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI
+              value: "http://keycloak.aisolate.svc:8080/realms/aisolate/protocol/openid-connect/certs"
+            - name: AISOLATE_ROLES_CLAIM
+              value: "realm_access.roles"
+            - name: AISOLATE_PUBLIC_URL
+              value: "https://aisolate.example.com"
+            - name: AISOLATE_CORS_ALLOWED_ORIGINS
+              value: "https://ui.example.com"
+            - name: AISOLATE_CLUSTER_NAMESPACE
+              value: "aisolate"
+            - name: AISOLATE_AUDIT_INGEST_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: audit-ingest
+                  key: key
+            - name: AISOLATE_CREDENTIALS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: credentials-key
+                  key: key
+            - name: AISOLATE_AUDIT_INGEST_PORT
+              value: "8085"
+            - name: AISOLATE_AUDIT_RETENTION_MONTHS
+              value: "84"
+            - name: AISOLATE_MAX_ARTIFACT_SIZE
+              value: "500MB"
+            - name: AISOLATE_TRACING_QUERY_URL
+              value: "http://jaeger.monitoring.svc:16686"
+            - name: AISOLATE_METRICS_QUERY_URL
+              value: "http://prometheus.monitoring.svc:9090"
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: ingest
+              containerPort: 8085
+            - name: management
+              containerPort: 9464
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: management
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: management
+            initialDelaySeconds: 90
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 1m
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat
+  namespace: aisolate
+  labels:
+    app: chat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat
+  template:
+    metadata:
+      labels:
+        app: chat
+    spec:
+      nodeSelector:
+        pool: robot
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: robot
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: registry-credentials
+      hostAliases:
+        - hostnames:
+            - aisolate.example.com
+            - idp.example.com
+          ip: 10.96.0.10
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: chat
+          image: aisolate/chat@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 1m
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: cache
+              mountPath: /app/apps/chat/.next/cache
+      volumes:
+        - name: cache
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aisolate-controller
+  namespace: aisolate
+  labels:
+    aisolate.dev/role: controller
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      aisolate.dev/role: controller
+  template:
+    metadata:
+      labels:
+        aisolate.dev/role: controller
+      annotations:
+        aisolate.dev/settings: "aisolate:\n  controller:\n    namespace: aisolate\n    ingress:\n      host: \"aisolate.example.com\"\n      className: \"nginx\"\n      publicUrl: \"https://aisolate.example.com\"\n    images:\n      airlock: docker-public.sonatype.reportix.com/aisolate/airlock@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n      toolServer: docker-public.sonatype.reportix.com/aisolate/tool-server@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\n      airlockPython: docker-public.sonatype.reportix.com/aisolate/airlock-python@sha256:9999999999999999999999999999999999999999999999999999999999999999\n      toolServerPython: docker-public.sonatype.reportix.com/aisolate/tool-server-python@sha256:8888888888888888888888888888888888888888888888888888888888888888\n      pullPolicy: IfNotPresent\n      allowTags: false\n    identity:\n      issuerUri: \"https://keycloak.example.com/realms/acme\"\n      jwkSetUri: \"http://keycloak.aisolate.svc:8080/realms/acme/protocol/openid-connect/certs\"\n      rolesClaim: \"realm_access.roles\"\n      egress:\n        \n        namespaceSelector:\n          \"[kubernetes.io/metadata.name]\": \"aisolate\"\n        podSelector:\n          \"[app]\": \"keycloak\"\n        port: 8080\n    egress:\n      dns:\n        \n        namespaceSelector:\n          \"[kubernetes.io/metadata.name]\": \"kube-system\"\n        podSelector:\n          \"[k8s-app]\": \"kube-dns\"\n        port: 53\n      ingressFrom:\n        \n        namespaceSelector:\n          \"[kubernetes.io/metadata.name]\": \"ingress-nginx\"\n      hosts:\n        \"[hr-db.example.com]\":\n          \n          cidr: \"10.20.30.40/32\"\n          port: 5432\n        \"[ollama.llm.svc]\":\n          \n          namespaceSelector:\n            \"[kubernetes.io/metadata.name]\": \"llm\"\n          podSelector:\n            \"[app]\": \"ollama\"\n          port: 11434\n      proxy:\n        enabled: true\n        host: egress\n        port: 3128\n        domains: [\"idp.example.com\"]\n    airlockPods:\n      replicas: 2\n      runtimeClassName: \"\"\n    scheduling:\n      nodeSelector: {\"pool\":\"robot\"}\n      tolerations: [{\"effect\":\"NoSchedule\",\"key\":\"pool\",\"operator\":\"Equal\",\"value\":\"robot\"}]\n    corsAllowedOrigins: \"\"\n    observability:\n      otlpEndpoint: \"http://otel-collector.monitoring.svc:4318\"\n    code:\n      url: \"http://backend.aisolate.svc:8085/v1/code\"\n    audit:\n      url: \"http://backend.aisolate.svc:8085/v1/audit/events\"\n      failClosed: true\n      stdout: true\n    resources:\n      airlock: {\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"1536Mi\"},\"requests\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"768Mi\"}}\n      toolServer: {\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"1Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"512Mi\"}}"
+        checksum/audit-ingest-key: "generated"
+    spec:
+      nodeSelector:
+        pool: robot
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: robot
+      serviceAccountName: aisolate-controller
+      imagePullSecrets:
+        - name: registry-credentials
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: controller
+          image: docker-public.sonatype.reportix.com/aisolate/controller@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: AISOLATE_CONTROLLER_AUDIT_INGESTKEY
+              valueFrom:
+                secretKeyRef:
+                  name: audit-ingest
+                  key: key
+          ports:
+            - name: http
+              containerPort: 8082
+            - name: management
+              containerPort: 9464
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: management
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: management
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 1m
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: settings
+              mountPath: /etc/aisolate
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: settings
+          downwardAPI:
+            items:
+              - path: settings.yaml
+                fieldRef:
+                  fieldPath: metadata.annotations['aisolate.dev/settings']
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: egress-proxy
+  namespace: aisolate
+  labels:
+    aisolate.dev/role: egress-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      aisolate.dev/role: egress-proxy
+  template:
+    metadata:
+      labels:
+        aisolate.dev/role: egress-proxy
+      annotations:
+        aisolate.dev/envoy-yaml: "static_resources:\n  listeners:\n    - name: proxy\n      address:\n        socket_address: {address: 0.0.0.0, port_value: 3128}\n      filter_chains:\n        - filters:\n            - name: envoy.filters.network.http_connection_manager\n              typed_config:\n                \"@type\": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager\n                stat_prefix: egress\n                upgrade_configs:\n                  - upgrade_type: CONNECT\n                access_log:\n                  - name: envoy.access_loggers.stdout\n                    typed_config:\n                      \"@type\": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog\n                http_filters:\n                  - name: envoy.filters.http.dynamic_forward_proxy\n                    typed_config:\n                      \"@type\": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig\n                      dns_cache_config: {\"dns_lookup_family\":\"V4_ONLY\",\"name\":\"egress\",\"typed_dns_resolver_config\":{\"name\":\"envoy.network.dns_resolver.cares\",\"typed_config\":{\"@type\":\"type.googleapis.com/envoy.extensions.network.dns_resolver.cares.v3.CaresDnsResolverConfig\",\"dns_resolver_options\":{\"no_default_search_domain\":true}}}}\n                  - name: envoy.filters.http.router\n                    typed_config:\n                      \"@type\": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router\n                route_config:\n                  virtual_hosts:\n                    - name: allowed\n                      domains: [\"idp.example.com:443\"]\n                      routes:\n                        - match: {connect_matcher: {}}\n                          route:\n                            cluster: egress\n                            timeout: 0s\n                            upgrade_configs:\n                              - upgrade_type: CONNECT\n                                connect_config: {}\n                        - match: {prefix: /}\n                          direct_response: {status: 403}\n                    - name: refused\n                      domains: [\"*\"]\n                      routes:\n                        - match: {connect_matcher: {}}\n                          direct_response: {status: 403}\n                        - match: {prefix: /}\n                          direct_response: {status: 403}\n  clusters:\n    - name: egress\n      lb_policy: CLUSTER_PROVIDED\n      cluster_type:\n        name: envoy.clusters.dynamic_forward_proxy\n        typed_config:\n          \"@type\": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig\n          dns_cache_config: {\"dns_lookup_family\":\"V4_ONLY\",\"name\":\"egress\",\"typed_dns_resolver_config\":{\"name\":\"envoy.network.dns_resolver.cares\",\"typed_config\":{\"@type\":\"type.googleapis.com/envoy.extensions.network.dns_resolver.cares.v3.CaresDnsResolverConfig\",\"dns_resolver_options\":{\"no_default_search_domain\":true}}}}\n"
+    spec:
+      nodeSelector:
+        pool: robot
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: robot
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: registry-credentials
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: envoy
+          image: envoyproxy/envoy@sha256:ccb37e93d8274a525fe00d67287716dbe3d58bc4237d7627af9e64fae0fd25c8
+          imagePullPolicy: IfNotPresent
+          args: ["-c", "/etc/envoy/envoy.yaml", "--disable-hot-restart"]
+          ports:
+            - containerPort: 3128
+          readinessProbe:
+            tcpSocket:
+              port: 3128
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 1m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/envoy
+              readOnly: true
+      volumes:
+        - name: conf
+          downwardAPI:
+            items:
+              - path: envoy.yaml
+                fieldRef:
+                  fieldPath: metadata.annotations['aisolate.dev/envoy-yaml']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui
+  namespace: aisolate
+  labels:
+    app: ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ui
+  template:
+    metadata:
+      labels:
+        app: ui
+    spec:
+      nodeSelector:
+        pool: robot
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: robot
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: registry-credentials
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ui
+          image: aisolate/ui@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 1m
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: cache
+              mountPath: /app/apps/frontend/.next/cache
+      volumes:
+        - name: cache
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: aisolate
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+      annotations:
+        checksum/realms: "5fb20e175e82"
+    spec:
+      nodeSelector:
+        pool: robot
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: robot
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: registry-credentials
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: build
+          image: quay.io/keycloak/keycloak@sha256:29be7252db0a106f1cd2ac17b9a56ff2668073da645638a38b9fc67deeb2d6c4
+          imagePullPolicy: IfNotPresent
+          command: [/bin/bash, -c, "/opt/keycloak/bin/kc.sh build --db=dev-file --health-enabled=true && cp -r /opt/keycloak/lib/quarkus/. /build/"]
+          resources:
+            requests:
+              cpu: 1m
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: build
+              mountPath: /build
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak@sha256:29be7252db0a106f1cd2ac17b9a56ff2668073da645638a38b9fc67deeb2d6c4
+          imagePullPolicy: IfNotPresent
+          args: [start, --optimized, --import-realm]
+          env:
+            - name: KC_HOSTNAME
+              value: "https://keycloak.example.com"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: admin-password
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: admin-password
+            - name: DEVELOPER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: developer-password
+            - name: AUDITOR_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: auditor-password
+            - name: JANE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: jane-password
+            - name: JOHN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak
+                  key: john-password
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 60
+          resources:
+            requests:
+              cpu: 1m
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /opt/keycloak/data
+            - name: realms
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+            - name: build
+              mountPath: /opt/keycloak/lib/quarkus
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: keycloak
+        - name: realms
+          configMap:
+            name: keycloak-realms
+        - name: build
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aisolate
+  namespace: aisolate
+  annotations:
+    cert-manager.io/cluster-issuer: ca
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "aisolate.example.com"
+      secretName: aisolate-tls
+  rules:
+    - host: aisolate.example.com
+      http:
+        paths:
+          - path: /v1/airlocks
+            pathType: Exact
+            backend:
+              service:
+                name: aisolate
+                port:
+                  number: 8080
+          - path: /v1/spaces/
+            pathType: Prefix
+            backend:
+              service:
+                name: aisolate
+                port:
+                  number: 8080
+          - path: /.well-known/
+            pathType: Prefix
+            backend:
+              service:
+                name: aisolate
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend
+  namespace: aisolate
+  annotations:
+    cert-manager.io/cluster-issuer: ca
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "api.aisolate.example.com"
+      secretName: backend-tls
+  rules:
+    - host: api.aisolate.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: chat
+  namespace: aisolate
+  annotations:
+    cert-manager.io/cluster-issuer: ca
+    nginx.ingress.kubernetes.io/proxy-body-size: 16m
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "chat.example.com"
+      secretName: chat-tls
+  rules:
+    - host: chat.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: chat
+                port:
+                  number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ui
+  namespace: aisolate
+  annotations:
+    cert-manager.io/cluster-issuer: ca
+    nginx.ingress.kubernetes.io/proxy-body-size: 16m
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "ui.example.com"
+      secretName: ui-tls
+  rules:
+    - host: ui.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ui
+                port:
+                  number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+  namespace: aisolate
+  annotations:
+    cert-manager.io/cluster-issuer: ca
+    nginx.ingress.kubernetes.io/proxy-body-size: 16m
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "keycloak.example.com"
+      secretName: keycloak-tls
+  rules:
+    - host: keycloak.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aisolate-test
+  namespace: aisolate
+  annotations: {"helm.sh/hook": test, "helm.sh/hook-weight": "-5", "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded,hook-failed"}
+spec:
+  podSelector:
+    matchLabels: {aisolate.dev/role: test}
+  policyTypes: [Egress]
+  egress:
+    - {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aisolate-test-reachability
+  namespace: aisolate
+  labels: {aisolate.dev/role: test}
+  annotations: {"helm.sh/hook": test, "helm.sh/hook-delete-policy": "before-hook-creation,hook-succeeded"}
+spec:
+  nodeSelector:
+    pool: robot
+  tolerations:
+    - effect: NoSchedule
+      key: pool
+      operator: Equal
+      value: robot
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  imagePullSecrets:
+    - name: registry-credentials
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: probe
+      image: curlimages/curl@sha256:9a1ed35addb45476afa911696297f8e115993df459278ed036182dd2cd22b67b
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: ["ALL"]}
+      command: ["/bin/sh", "-ec"]
+      args:
+        - |
+          ingress_ns="ingress-nginx"
+          airlock_pod=unknown
+          if [ -n "$ingress_ns" ]; then
+            ingress="http://ingress-nginx-controller.$ingress_ns.svc.cluster.local"
+            echo "positive: the release answers through the ingress controller (401 without a token proves the path)"
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H "Host: aisolate.example.com" "$ingress/v1/airlocks" || true)
+            case "$code" in
+              401) airlock_pod=yes ;;
+              503) airlock_pod=no; echo "skipped: no discovery pod yet (503); rerun helm test once a Space exists" ;;
+              *) echo "expected 401 through the ingress, got $code"; exit 1 ;;
+            esac
+          else
+            echo "skipped: the ingress peer is a cidr, not a namespace; no positive probe from here"
+          fi
+          echo "negative: the discovery pods must be unreachable from a pod that is not the ingress controller"
+          if curl -s -o /dev/null --max-time 5 http://aisolate:8080/actuator/health; then
+            echo "FAIL: a discovery pod answered a pod in the namespace: the network policy is not enforced"; exit 1
+          fi
+          if [ "$airlock_pod" = no ]; then echo "skipped: no discovery pod to find unreachable"; else echo "ok: discovery pods unreachable"; fi
+          for svc in ; do
+            if getent hosts "$svc" >/dev/null 2>&1; then
+              echo "negative: $svc must be unreachable from anything but its airlock's airlock pod"
+              if curl -s -o /dev/null --max-time 5 "http://$svc:8081/actuator/health"; then
+                echo "FAIL: $svc answered a pod that is not an airlock pod: the network policy is not enforced"; exit 1
+              fi
+              echo "ok: $svc unreachable"
+            else
+              echo "skipped: $svc not present (no airlock deployed yet)"
+            fi
+          done
+          echo "reachability checks passed"

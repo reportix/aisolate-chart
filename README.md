@@ -68,10 +68,10 @@ tool server Services in `test.toolServers` are too; before that, it reports thos
 
 `tests/chart/test.sh` checks that every parameter a template reads is documented and every documented one read,
 that `chart/README.md`'s parameter table and `chart/values.schema.json` are current, that the renders of
-`tests/chart/values/*.yaml` and of `chart/examples/` match `tests/chart/expected-results/`, and the render
-invariants (`verify-render-invariants.sh`): one namespace, every pod restricted on a read-only root and its
-image by digest; the network opened to each component's peers alone; the generated Secrets and the settings in
-no ConfigMap; the Roles bounded to what each component does. After an intended change, `regenerate.sh` rewrites
+`tests/chart/values/*.yaml` (the default install, and everything on) match `tests/chart/expected-results/`, and
+the render invariants (`verify-render-invariants.sh`): one namespace, every pod restricted on a read-only root and
+its image by digest; the network opened to each component's peers alone; the generated Secrets and the settings in
+no ConfigMap; the Roles bounded to what each component does; the production example renders. After an intended change, `regenerate.sh` rewrites
 what they compare against. You need `helm` and `yq`; `README_GENERATOR_BIN` names the readme generator (a build
 of readme-generator-for-helm with the strict schema and the `noReadme` modifier), without which the docs check
 is skipped. CI runs the same script on a public image with checksum-verified `helm` and `yq`, publishes the chart

@@ -1,7 +1,6 @@
-# headless.yaml sending traces: the OTLP endpoint and its host's peer.
+# The AIsolate digests every test render starts from: values.yaml carries them only once a release is pinned, and
+# these keep the goldens the same across releases. The scenario files in values/ add what they need on top.
 platform:
-  identity:
-    issuerUri: https://idp.example.com/realms/customer
   controller:
     image:
       digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -17,13 +16,3 @@ platform:
   toolServerPython:
     image:
       digest: sha256:8888888888888888888888888888888888888888888888888888888888888888
-  observability:
-    otlpEndpoint: http://otel-collector.monitoring.svc:4318
-  egress:
-    hosts:
-      otel-collector.monitoring.svc:
-        namespaceSelector:
-          kubernetes.io/metadata.name: monitoring
-        podSelector:
-          app: otel-collector
-        port: 4318

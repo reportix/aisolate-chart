@@ -1,0 +1,60 @@
+# Everything on, every option set once, so that one golden pins what each renders: the AIsolate UI, the chat, the chart's
+# own Keycloak with its demo users, the egress proxy, Monitoring, TLS and a node pool. No global registry: the UI and chat
+# images have none by default, and the invariants cover global.imageRegistry.
+headless: false
+global:
+  imagePullSecrets: [registry-credentials]
+persistence:
+  postgres:
+    resources: {requests: {cpu: 1m}}
+    storage: {storageClass: fast}
+platform:
+  ingress:
+    tls: true
+    annotations: {cert-manager.io/cluster-issuer: ca}
+  scheduling:
+    nodeSelector: {pool: robot}
+    tolerations: [{key: pool, operator: Equal, value: robot, effect: NoSchedule}]
+  egress:
+    apiServer: {cidr: 10.0.0.1/32}
+    hosts:
+      hr-db.example.com: {cidr: 10.20.30.40/32, port: 5432}
+      ollama.llm.svc: {namespaceSelector: {kubernetes.io/metadata.name: llm}, podSelector: {app: ollama}, port: 11434}
+    proxy:
+      domains: [idp.example.com]
+      resources: {requests: {cpu: 1m}}
+  observability:
+    otlpEndpoint: http://otel-collector.monitoring.svc:4318
+  tracing:
+    queryUrl: http://jaeger.monitoring.svc:16686
+    egress: {namespaceSelector: {kubernetes.io/metadata.name: monitoring}, podSelector: {app: jaeger}, port: 16686}
+  metrics:
+    queryUrl: http://prometheus.monitoring.svc:9090
+    egress: {namespaceSelector: {kubernetes.io/metadata.name: monitoring}, podSelector: {app: prometheus}, port: 9090}
+  airlock:
+    replicas: 2
+  controller:
+    resources: {requests: {cpu: 1m}}
+  backend:
+    maxArtifactSize: 500MB
+    image:
+      digest: sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+    resources: {requests: {cpu: 1m}}
+  frontend:
+    host: ui.example.com
+    image:
+      digest: sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+    resources: {requests: {cpu: 1m}}
+  chat:
+    enabled: true
+    host: chat.example.com
+    hostAliases: [{ip: 10.96.0.10, hostnames: [aisolate.example.com, idp.example.com]}]
+    image:
+      digest: sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    resources: {requests: {cpu: 1m}}
+  keycloak:
+    enabled: true
+    host: keycloak.example.com
+    demoUsers: true
+    realms: {operators: {loginTheme: aisolate-ui}, users: {loginTheme: aisolate}}
+    resources: {requests: {cpu: 1m}}

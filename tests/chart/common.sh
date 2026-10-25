@@ -22,19 +22,13 @@ generate_docs() {
     || { echo "$out" >&2; return 1; }
 }
 
-# One golden per values file of the chart (tests/chart/values/*.yaml, chart/examples/*-values.yaml).
+# One golden per scenario of tests/chart/values/, each rendered on top of digests.yaml.
 render() {
-  local dir=$1 values name
+  local dir=$1 values
   rm -rf "$dir" && mkdir -p "$dir"
-  for values in tests/chart/values/*.yaml chart/examples/*-values.yaml; do
-    name=$(basename "$values" .yaml)
-    name=${name%-values}
-    name=${name#values-}
-    # The examples carry no AIsolate digests (a release pins them): their goldens take tests/chart/example-digests.yaml.
-    set -- --values "$values"
-    case $values in chart/examples/*) set -- --values tests/chart/example-digests.yaml "$@" ;; esac
+  for values in tests/chart/values/*.yaml; do
     # The database password, the audit ingest key, the credentials key and Keycloak's passwords are random per render: the goldens keep their place, not their value.
-    helm template aisolate chart --namespace aisolate "$@" \
+    helm template aisolate chart --namespace aisolate --values tests/chart/digests.yaml --values "$values" \
       | yq '... comments="" | (select(.kind == "Secret" and .metadata.name == "db") | .data.password) = "generated"
           | (select(.kind == "Secret" and .metadata.name == "audit-ingest") | .data.key) = "generated"
           | (select(.kind == "Secret" and .metadata.name == "credentials-key") | .data.key) = "generated"
@@ -42,6 +36,6 @@ render() {
           | (select(.spec.template.metadata.annotations["checksum/credentials-key"] != null) | .spec.template.metadata.annotations["checksum/credentials-key"]) = "generated"
           | (select(.spec.template.metadata.annotations["checksum/audit-ingest-key"] != null) | .spec.template.metadata.annotations["checksum/audit-ingest-key"]) = "generated"
           | (select(.spec.template.metadata.annotations["checksum/db-password"] != null) | .spec.template.metadata.annotations["checksum/db-password"]) = "generated"' \
-      > "$dir/$name.yaml"
+      > "$dir/$(basename "$values")"
   done
 }
