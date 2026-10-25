@@ -15,6 +15,9 @@ table, the schema and the goldens: read the diff of the goldens, it is the revie
 invariant in `tests/chart/verify-render-invariants.sh` that fails when it breaks, whatever the goldens say; a fix without one is
 not finished. A change to the chart's behaviour updates `chart/README.md` (or the README) in the same merge request.
 
+`tests/e2e/run.sh` runs the chart end to end on a kind cluster, by hand (README.md, End-to-end test); CI's manual `test_deploy`
+job does the same with the app's snapshot images.
+
 CI (`.gitlab-ci.yml`) runs `test.sh` on every push, publishes every commit on the default branch to the internal Helm repository
 as `<version>-<sha10>` and, on a tag `<version>` that names `Chart.yaml`'s version, the chart to the public one. Every merge
 request bumps `version` in `chart/Chart.yaml`: CI's `verify-version` job fails a branch that does not.

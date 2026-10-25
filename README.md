@@ -69,6 +69,19 @@ through the ingress controller and that its discovery pods, and the Services in 
   `persistence.postgres.existingSecret`, `platform.audit.existingSecret` and `platform.credentials.existingSecret` (and
   `platform.keycloak.existingSecret`). The chart cannot keep a generated key there, and every sync would make a new one.
 
+## End-to-end test
+
+`tests/e2e/run.sh` installs the chart from this tree on a new kind cluster with `allowTags`, the chart's Keycloak and a
+stub model server, deploys one airlock without code (the `company-hr` template's documents), runs `helm test` and asks
+the airlock a question through the ingress as a Keycloak user, then deletes the cluster (`--keep` leaves it). It needs
+Docker 28 or newer (Docker Desktop on a laptop), kind, helm, kubectl 1.31 or newer, curl and jq, and the images
+`aisolate/controller:local` and `aisolate/airlock:local` built in the app repository:
+`./gradlew :apps:controller:bootJar :apps:airlock:bootJar`, then `docker build -t aisolate/<app>:local apps/<app>`.
+`--images <prefix>:<tag>` names others. `--context` runs on an existing cluster and changes it: it applies the CRDs,
+installs ingress-nginx when absent and leaves it, labels the namespace restricted, upgrades a release `aisolate` there
+and loads no images; give it a namespace you own on a cluster that can pull them. CI's manual `test_deploy` job runs it
+with the app's snapshot images from the internal registry: `AISOLATE_IMAGE_TAG`, a `<version>-<sha10>` of its `main`.
+
 ## Releasing
 
 1. Tag the release in the app repository (`aisolate/aisolate`); its pipeline publishes the images to
