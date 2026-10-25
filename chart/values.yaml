@@ -240,8 +240,8 @@ platform:
     ## @param platform.frontend.host AIsolate UI host (headless=false)
     host: ui.aisolate.example.com
     image:
-      ## @param platform.frontend.image.registry AIsolate UI image registry: that of the image you build for your hosts, named by its digest; once the UI image is published, the chart pins the public one
-      registry: docker-public.sonatype.reportix.com
+      ## @param platform.frontend.image.registry AIsolate UI image registry, empty until the UI image is published: for the image you build for your hosts, set its registry and its digest
+      registry: ""
       ## @param platform.frontend.image.repository AIsolate UI image repository; the image carries the backend's URL and the operators' identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)
       repository: aisolate/ui
       ## @param platform.frontend.image.tag AIsolate UI image tag, used only with allowTags; empty: the chart's appVersion
@@ -261,8 +261,8 @@ platform:
     ## @param platform.chat.host The chat's host; add its origin to platform.airlock.corsAllowedOrigins
     host: chat.aisolate.example.com
     image:
-      ## @param platform.chat.image.registry Chat image registry: that of the image you build for its host, named by its digest; once the chat image is published, the chart pins the public one
-      registry: docker-public.sonatype.reportix.com
+      ## @param platform.chat.image.registry Chat image registry, empty until the chat image is published: for the image you build for its host, set its registry and its digest
+      registry: ""
       ## @param platform.chat.image.repository Chat image repository; the image carries the release's URL from its build (NEXT_PUBLIC_AISOLATE_URL, a build arg of its Dockerfile)
       repository: aisolate/chat
       ## @param platform.chat.image.tag Chat image tag, used only with allowTags; empty: the chart's appVersion

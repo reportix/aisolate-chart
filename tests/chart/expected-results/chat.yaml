@@ -191,7 +191,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: chat
-          image: docker-public.sonatype.reportix.com/aisolate/chat@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+          image: aisolate/chat@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

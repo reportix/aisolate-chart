@@ -640,7 +640,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: ui
-          image: docker-public.sonatype.reportix.com/aisolate/ui@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+          image: aisolate/ui@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

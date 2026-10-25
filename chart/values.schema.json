@@ -609,8 +609,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "AIsolate UI image registry: that of the image you build for your hosts, named by its digest; once the UI image is published, the chart pins the public one",
-                                    "default": "docker-public.sonatype.reportix.com"
+                                    "description": "AIsolate UI image registry, empty until the UI image is published: for the image you build for your hosts, set its registry and its digest",
+                                    "default": ""
                                 },
                                 "repository": {
                                     "type": "string",
@@ -668,8 +668,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Chat image registry: that of the image you build for its host, named by its digest; once the chat image is published, the chart pins the public one",
-                                    "default": "docker-public.sonatype.reportix.com"
+                                    "description": "Chat image registry, empty until the chat image is published: for the image you build for its host, set its registry and its digest",
+                                    "default": ""
                                 },
                                 "repository": {
                                     "type": "string",

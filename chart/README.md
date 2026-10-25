@@ -15,8 +15,8 @@ them into airlock pods and tool server pods, and the namespace's policies.
 
 `platform.chat.enabled` adds the AIsolate chat, the sample client, on `platform.chat.host`, with or without the UI.
 Its image carries the release's URL from its build (`NEXT_PUBLIC_AISOLATE_URL`, a build arg of its Dockerfile), so
-build it for `platform.ingress.publicUrl`; add the chat's origin to `platform.airlock.corsAllowedOrigins`, since the
-browser calls the airlocks from it.
+build it for `platform.ingress.publicUrl` and set its registry and its digest under `platform.chat.image`; add the
+chat's origin to `platform.airlock.corsAllowedOrigins`, since the browser calls the airlocks from it.
 
 `platform.keycloak.enabled` adds a Keycloak of the chart's own on `platform.keycloak.host`, a demo and trial identity
 provider with the two realms AIsolate needs: `platform.keycloak.realms.operators` (default `aisolate`: the AIsolate UI
@@ -48,13 +48,13 @@ kubectl label namespace aisolate pod-security.kubernetes.io/enforce=restricted
 
 Start from `examples/example-values.yaml`:
 - the AIsolate images, only where you mirror or build them: a published chart pulls each from
-  `docker-public.sonatype.reportix.com`, pinned by digest to its appVersion, except the UI's and the chat's: they
-  carry their deployment's URLs from their build, so you build them (below) and name each by its digest.
-  `allowTags=true` is only for a cluster that builds its own images, each under its own `registry` (empty for an
-  image loaded into the nodes); with `allowTags=false`, the default, a tag-only image fails the render. The airlock
-  and tool server come twice, `platform.airlock`/`platform.toolServer` (Java) and
-  `platform.airlockPython`/`platform.toolServerPython`: the controller runs an airlock's pods on the pair of its
-  code's language
+  `docker-public.sonatype.reportix.com`, pinned by digest to its appVersion, except the UI's and the chat's, which
+  have no default registry: they carry their deployment's URLs from their build, so for each one you build (below),
+  set its registry and its digest. `allowTags=true` is only for a cluster that builds its own images, each under
+  its own `registry` (empty for an image loaded into the nodes); with `allowTags=false`, the default, a tag-only
+  image fails the render. The airlock and tool server come twice, `platform.airlock`/`platform.toolServer` (Java)
+  and `platform.airlockPython`/`platform.toolServerPython`: the controller runs an airlock's pods on the pair of
+  its code's language
 - the users' identity provider under `platform.identity`, and optionally one of AIsolate's own for the dashboard and the CLI under `platform.identity.operators` (empty: the users'); a separate operators' host needs its own
   `platform.identity.operators.egress`, or the backend cannot reach it
 - the cluster's DNS and ingress peers under `platform.egress`
@@ -69,10 +69,10 @@ Start from `examples/example-values.yaml`:
 - TLS on the Ingresses: `platform.ingress.tls` and, for cert-manager or another controller,
   `platform.ingress.annotations`
 
-With the AIsolate UI, also set `platform.frontend.host` and `platform.backend.host`. The UI image
-carries the backend's URL and the operators' identity provider (the realm the dashboard signs in to) from its build
-(`NEXT_PUBLIC_AISOLATE_URL` and `NEXT_PUBLIC_OIDC_AUTHORITY`, build args of the UI's Dockerfile in the
-`aisolate` repository), so build it for those hosts.
+With the AIsolate UI, also set `platform.frontend.host` and `platform.backend.host`. The UI image carries the
+backend's URL and the operators' identity provider (the realm the dashboard signs in to) from its build
+(`NEXT_PUBLIC_AISOLATE_URL` and `NEXT_PUBLIC_OIDC_AUTHORITY`, build args of the UI's Dockerfile in the `aisolate`
+repository), so build it for those hosts and set its registry and its digest under `platform.frontend.image`.
 
 For a private registry, `global.imageRegistry` reaches every image, the controller's pods included.
 `global.imagePullSecrets` reaches only the chart's own pods. The airlock and tool server pods run as the
@@ -325,7 +325,7 @@ Helm keeps the CRDs, and with them every `Space` and `Airlock`. To remove those 
 | `platform.audit.existingSecret`                 | An existing Secret holding the audit ingest key under the key key; set: the chart creates no audit-ingest Secret and hashes none into the pod checksums, recommended for a render without cluster access (Argo CD, helm template), where lookup cannot keep the generated key; empty: the chart generates and keeps one                                                                               | `""`                                                                      |
 | `platform.credentials.existingSecret`           | An existing Secret holding the key the backend seals typed API keys and passwords with, under the key key (32+ characters); set: the chart creates no credentials-key Secret and hashes none into the backend's checksum, recommended for a render without cluster access (Argo CD, helm template); empty: the chart generates and keeps one                                                          | `""`                                                                      |
 | `platform.frontend.host`                        | AIsolate UI host (headless=false)                                                                                                                                                                                                                                                                                                                                                                     | `ui.aisolate.example.com`                                                 |
-| `platform.frontend.image.registry`              | AIsolate UI image registry: that of the image you build for your hosts, named by its digest; once the UI image is published, the chart pins the public one                                                                                                                                                                                                                                            | `docker-public.sonatype.reportix.com`                                     |
+| `platform.frontend.image.registry`              | AIsolate UI image registry, empty until the UI image is published: for the image you build for your hosts, set its registry and its digest                                                                                                                                                                                                                                                            | `""`                                                                      |
 | `platform.frontend.image.repository`            | AIsolate UI image repository; the image carries the backend's URL and the operators' identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)                                                                                                                                                                                                                          | `aisolate/ui`                                                             |
 | `platform.frontend.image.tag`                   | AIsolate UI image tag, used only with allowTags; empty: the chart's appVersion                                                                                                                                                                                                                                                                                                                        | `""`                                                                      |
 | `platform.frontend.image.digest`                | AIsolate UI image digest (sha256:…); required unless allowTags                                                                                                                                                                                                                                                                                                                                        | `""`                                                                      |
@@ -334,7 +334,7 @@ Helm keeps the CRDs, and with them every `Space` and `Airlock`. To remove those 
 | `platform.frontend.resources`                   | AIsolate UI container resources (requests, limits)                                                                                                                                                                                                                                                                                                                                                    | `{}`                                                                      |
 | `platform.chat.enabled`                         | Install the AIsolate chat, the sample client, on its own host, with or without the AIsolate UI                                                                                                                                                                                                                                                                                                        | `false`                                                                   |
 | `platform.chat.host`                            | The chat's host; add its origin to platform.airlock.corsAllowedOrigins                                                                                                                                                                                                                                                                                                                                | `chat.aisolate.example.com`                                               |
-| `platform.chat.image.registry`                  | Chat image registry: that of the image you build for its host, named by its digest; once the chat image is published, the chart pins the public one                                                                                                                                                                                                                                                   | `docker-public.sonatype.reportix.com`                                     |
+| `platform.chat.image.registry`                  | Chat image registry, empty until the chat image is published: for the image you build for its host, set its registry and its digest                                                                                                                                                                                                                                                                   | `""`                                                                      |
 | `platform.chat.image.repository`                | Chat image repository; the image carries the release's URL from its build (NEXT_PUBLIC_AISOLATE_URL, a build arg of its Dockerfile)                                                                                                                                                                                                                                                                   | `aisolate/chat`                                                           |
 | `platform.chat.image.tag`                       | Chat image tag, used only with allowTags; empty: the chart's appVersion                                                                                                                                                                                                                                                                                                                               | `""`                                                                      |
 | `platform.chat.image.digest`                    | Chat image digest (sha256:…); required unless allowTags                                                                                                                                                                                                                                                                                                                                               | `""`                                                                      |
