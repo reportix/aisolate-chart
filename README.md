@@ -1,11 +1,9 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/aisolate-white.png">
-    <img src="docs/assets/aisolate-black.png" alt="AIsolate" width="320">
+    <img src="docs/assets/aisolate-black.png" alt="AIsolate" width="480">
   </picture>
 </p>
-
-# AIsolate Helm chart
 
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 
@@ -95,12 +93,4 @@ with the app's snapshot images from the internal registry: `AISOLATE_IMAGE_TAG`,
 4. Once it is merged, tag `main` with the chart's `version`, bare semver without a `v`: CI checks the pins
    (`scripts/pin-release.sh --check`) and publishes the chart to the public Helm repository.
 
-## Contributing and licence
-
-Checks and conventions: [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
-
-AIsolate is free software under the GNU Affero General Public License, version 3 only (`LICENSE`, SPDX `AGPL-3.0-only`). You may
-run, study, change and redistribute it; if you offer a modified AIsolate to others over a network, you must offer them its source
-as well. Contributions are accepted under the DCO and the licence grant in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Copyright (C) 2026 Reportix GmbH. The team behind AIsolate: [AUTHORS.md](AUTHORS.md).
+Contributions: [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
