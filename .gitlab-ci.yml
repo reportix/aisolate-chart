@@ -44,6 +44,8 @@ test_render:
     expire_in: 1 week
 
 # A tag publishes values.yaml as it stands: without the digests scripts/pin-release.sh writes, the chart would not render.
+# ponytail: the UI's and the chat's may stay empty (an installer builds those images) until they are published
+# generically; then make them required.
 verify-pins:
   extends: .helm
   stage: test
@@ -52,6 +54,7 @@ verify-pins:
   script:
     - |
       for key in controller airlock toolServer airlockPython toolServerPython backend frontend chat; do
-        k=$key yq -e '.platform[strenv(k)].image.digest | test("^sha256:[a-f0-9]{64}$")' chart/values.yaml >/dev/null \
+        case $key in frontend|chat) re='^(sha256:[a-f0-9]{64})?$' ;; *) re='^sha256:[a-f0-9]{64}$' ;; esac
+        k=$key re=$re yq -e '.platform[strenv(k)].image.digest | test(strenv(re))' chart/values.yaml >/dev/null \
           || { echo "platform.$key.image.digest is not pinned: run scripts/pin-release.sh before tagging" >&2; exit 1; }
       done
