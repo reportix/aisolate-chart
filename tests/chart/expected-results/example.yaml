@@ -276,7 +276,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: envoy
-          image: registry.example.com/envoyproxy/envoy@sha256:4444444444444444444444444444444444444444444444444444444444444444
+          image: registry.example.com/envoyproxy/envoy@sha256:ccb37e93d8274a525fe00d67287716dbe3d58bc4237d7627af9e64fae0fd25c8
           imagePullPolicy: IfNotPresent
           args: ["-c", "/etc/envoy/envoy.yaml", "--disable-hot-restart"]
           ports:

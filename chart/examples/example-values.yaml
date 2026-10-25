@@ -1,6 +1,6 @@
-# A production install (headless): the images from the customer's mirror, the AIsolate ones with the chart's own
-# digests; the customer's identity provider, the hosts the airlocks may reach, the proxy as the one way out. The
-# proxy's digest and the addresses are placeholders: replace them.
+# A production install (headless): the images from the customer's mirror, the customer's identity provider, the
+# hosts the airlocks may reach, the proxy as the one way out. The chart's digest pins apply unless you mirror an
+# image under another digest; the addresses are placeholders: replace them.
 
 global:
   imageRegistry: registry.example.com
@@ -38,5 +38,3 @@ platform:
       # The identity provider is outside the cluster: the pods reach it through the proxy.
       domains:
         - idp.example.com
-      image:
-        digest: sha256:4444444444444444444444444444444444444444444444444444444444444444
