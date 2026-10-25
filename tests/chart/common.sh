@@ -6,8 +6,8 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 TEST_DIR="$ROOT_DIR/tests/chart"
 cd "$ROOT_DIR"
 
-# The readme generator: a build of readme-generator-for-helm with the strict schema and the noReadme
-# modifier, named by $README_GENERATOR_BIN. Without it the docs check is skipped and regenerate.sh stops.
+# The readme generator: a build of readme-generator-for-helm that writes the strict schema (--strict), named by
+# $README_GENERATOR_BIN. Without it the docs check is skipped and regenerate.sh stops.
 readme_generator() {
   [ -n "${README_GENERATOR_BIN:-}" ] && echo "$README_GENERATOR_BIN"
 }

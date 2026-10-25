@@ -8,7 +8,7 @@ global:
 
 ## @section Common parameters
 
-## @param headless Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy. false adds the AIsolate UI (frontend, backend, the backend's database). A bool, never a string
+## @param headless Without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy; false adds the UI (frontend, backend, its database). A bool, never a string
 headless: true
 
 ## @param allowTags Let tag-only images render, for clusters that build their own images; off, every AIsolate image needs its digest
@@ -72,7 +72,7 @@ platform:
     runtimeClassName: ""
     ## @param platform.airlock.corsAllowedOrigins Browser origins the airlock pods answer, e.g. the chat's (with platform.chat.enabled, the origin of platform.chat.host)
     corsAllowedOrigins: ""
-    ## @param platform.airlock.resources [object] Requests and limits of every airlock pod and discovery pod (cpu, memory, ephemeral-storage, which holds the airlock's fetched code in /tmp, at most 2Gi): one airlock's code or load must not starve its node
+    ## @param platform.airlock.resources [object] Requests and limits of every airlock and discovery pod (cpu, memory, ephemeral-storage: the fetched code lands in /tmp, at most 2Gi): one airlock's code or load must not starve its node
     resources:
       requests: {cpu: 250m, memory: 768Mi, ephemeral-storage: 256Mi}
       limits: {cpu: "2", memory: 1536Mi, ephemeral-storage: 4Gi}
@@ -129,19 +129,19 @@ platform:
     host: aisolate.example.com
     ## @param platform.ingress.publicUrl The release's public URL; its scheme serves the AIsolate UI's hosts too
     publicUrl: https://aisolate.example.com
-    ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls, with the chat chat-tls, with the chart's Keycloak keycloak-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too
+    ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls, ui-tls, backend-tls, chat-tls, keycloak-tls), from the installer or cert-manager
     tls: false
     ## @param platform.ingress.annotations [object] Annotations of every chart Ingress, over the chart's nginx ones, e.g. cert-manager.io/cluster-issuer
     annotations: {}
 
   identity:
-    ## @param platform.identity.issuerUri The application users' identity provider: the issuer the pods validate tokens against; the backend too unless operators.issuerUri is set; empty: the users realm of the chart's Keycloak (platform.keycloak.enabled), else required
+    ## @param platform.identity.issuerUri The application users' identity provider: the issuer the pods validate tokens against, and the backend unless operators.issuerUri is set; empty: the chart's Keycloak users realm, else required
     issuerUri: ""
     ## @param platform.identity.jwkSetUri Where the pods fetch the provider's keys; the backend too unless operators.issuerUri is set; empty with the chart's Keycloak: its in-cluster Service
     jwkSetUri: ""
-    ## @param platform.identity.rolesClaim Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups); the pods read it, the backend too unless operators.rolesClaim is set
+    ## @param platform.identity.rolesClaim Dot path of the roles claim in the tokens: the UI roles and the roles the rules name (Entra ID app roles: roles; Okta: groups); the pods read it, the backend unless operators.rolesClaim is set
     rolesClaim: realm_access.roles
-    ## @param platform.identity.egress [object] The provider as a NetworkPolicy peer, when it runs in the cluster or at a private address: namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required); empty: the chart's Keycloak when it answers, else the backend reaches it over HTTPS at a public address
+    ## @param platform.identity.egress [object] The provider as a NetworkPolicy peer, in the cluster or at a private address: namespaceSelector and podSelector, or cidr (/8 or longer), plus port (required); empty: Keycloak's, else public HTTPS
     egress: {}
     operators:
       ## @param platform.identity.operators.issuerUri AIsolate's own identity provider for the dashboard and the CLI; empty: the operators realm of the chart's Keycloak (platform.keycloak.enabled), else the one above
@@ -165,11 +165,11 @@ platform:
       namespaceSelector:
         kubernetes.io/metadata.name: ingress-nginx
     apiServer:
-      ## @param platform.egress.apiServer.cidr The Kubernetes API server's address, the controller's and the backend's way to it, e.g. the kubernetes Endpoints' IP/32 (kubectl get endpoints kubernetes -n default); empty: any address on the ports, which the install's notes warn of (on Cilium an ipBlock does not match a node-hosted API server: leave it empty there)
+      ## @param platform.egress.apiServer.cidr The Kubernetes API server's address, the controller's and the backend's way to it, e.g. the kubernetes Endpoints' IP/32; empty: any address on the ports (the notes warn; leave empty on Cilium)
       cidr: ""
       ## @param platform.egress.apiServer.ports [array] The API server's ports as the pods' traffic reaches it after the Service: 443 on most managed clusters, 6443 on kubeadm, k3s and OpenShift, 8443 on minikube
       ports: [443, 6443, 8443]
-    ## @param platform.egress.hosts [object] The hosts of every LLM and data source defined for all of AIsolate or by a space or an airlock, each with its NetworkPolicy peer: cidr (/8 or longer), or namespaceSelector and podSelector, never both, plus port (required); an airlock that resolves an unmapped host is Invalid, and a global entry with one is left out of every catalog; a host on platform.egress.proxy.domains needs no entry
+    ## @param platform.egress.hosts [object] The hosts of every LLM and data source, each with its NetworkPolicy peer (cidr /8 or longer, or namespaceSelector and podSelector, plus port): an airlock resolving an unmapped host is Invalid, a global entry with one is left out of every catalog; a host on platform.egress.proxy.domains needs no entry
     hosts: {}
     proxy:
       ## @param platform.egress.proxy.domains Hostnames the CONNECT-only egress proxy may reach on port 443: exact names, *.example.com for its subdomains, .example.com for the name and its subdomains; the proxy renders when non-empty
@@ -191,7 +191,7 @@ platform:
         limits: {cpu: 500m, memory: 256Mi}
 
   observability:
-    ## @param platform.observability.otlpEndpoint OTLP/HTTP base URL the airlock and tool server pods send their traces to, e.g. an OpenTelemetry Collector, http://otel-collector.monitoring.svc:4318 (the pods append /v1/traces); its host must be in platform.egress.hosts or proxied, or every space is Invalid; empty: no trace leaves the pods
+    ## @param platform.observability.otlpEndpoint OTLP/HTTP base URL the pods send traces to, e.g. http://otel-collector.monitoring.svc:4318 (/v1/traces is appended); its host must be in platform.egress.hosts or proxied, or every space is Invalid; empty: no traces
     otlpEndpoint: ""
 
   # The AIsolate UI's Monitoring (headless=false): the backend reads each trace from the trace store's query API in
@@ -205,7 +205,7 @@ platform:
   # Monitoring's Metrics tab (headless=false): the backend asks the Prometheus that scrapes the pods a fixed set of
   # queries, scoped to the caller's spaces by the series' space label; the browser never calls it.
   metrics:
-    ## @param platform.metrics.queryUrl The Prometheus HTTP API the backend reads, e.g. http://prometheus.monitoring.svc:9090, or any store that answers /api/v1/query and /api/v1/query_range alike; its series need the space label; empty: no Metrics tab
+    ## @param platform.metrics.queryUrl The Prometheus HTTP API the backend reads, e.g. http://prometheus.monitoring.svc:9090 (or any store answering /api/v1/query and /query_range); its series need the space label; empty: no Metrics tab
     queryUrl: ""
     ## @param platform.metrics.egress [object] Prometheus as the backend's NetworkPolicy peer, required with queryUrl: namespaceSelector and podSelector, or cidr, plus its port
     egress: {}
@@ -213,17 +213,17 @@ platform:
   # The audit trail is the platform's: each airlock pod hands its lines to the backend (headless=false), which keeps
   # them append-only and hash-chained per airlock. Headless has no backend: the pods print the lines to stdout alone.
   audit:
-    ## @param platform.audit.failClosed While an airlock pod's on-disk buffer of lines the backend has not taken is full, it refuses new questions with 503 "audit unavailable"; false: it answers and the line is lost from the backend's trail (stdout keeps it)
+    ## @param platform.audit.failClosed While an airlock pod's disk buffer of audit lines the backend has not taken is full, it refuses questions with 503 "audit unavailable"; false: it answers, and the line is lost from the trail (stdout keeps it)
     failClosed: true
     ## @param platform.audit.stdout Each audit line is also printed to the airlock pod's stdout, for a SIEM's log collector; headless keeps it on regardless
     stdout: true
     ## @param platform.audit.retentionMonths Months of audit lines the backend keeps (84: seven years); its daily job drops each older month whole
     retentionMonths: 84
-    ## @param platform.audit.existingSecret An existing Secret holding the audit ingest key under the key key; set: the chart creates no audit-ingest Secret and hashes none into the pod checksums, recommended for a render without cluster access (Argo CD, helm template), where lookup cannot keep the generated key; empty: the chart generates and keeps one
+    ## @param platform.audit.existingSecret An existing Secret with the audit ingest key under the key key: no audit-ingest Secret and no checksum then; set it for a render without a cluster (Argo CD, helm template); empty: generated and kept
     existingSecret: ""
 
   credentials:
-    ## @param platform.credentials.existingSecret An existing Secret holding the key the backend seals typed API keys and passwords with, under the key key (32+ characters); set: the chart creates no credentials-key Secret and hashes none into the backend's checksum, recommended for a render without cluster access (Argo CD, helm template); empty: the chart generates and keeps one
+    ## @param platform.credentials.existingSecret An existing Secret with the key the backend seals credentials with (32+ characters) under the key key: no credentials-key Secret or checksum then; for a render without a cluster; empty: generated
     existingSecret: ""
 
   frontend:
@@ -267,7 +267,7 @@ platform:
     hostAliases: []
 
   keycloak:
-    ## @param platform.keycloak.enabled Install a Keycloak of the chart's own, a demo and trial identity provider with the two realms AIsolate needs: platform.identity and platform.identity.operators then default to its realms; a production install names its own provider there instead
+    ## @param platform.keycloak.enabled Install the chart's own Keycloak, a demo identity provider with the two realms AIsolate needs; platform.identity and platform.identity.operators then default to them (production names its own)
     enabled: false
     ## @param platform.keycloak.host The chart's Keycloak host: the issuer the browsers, the UI, the CLI and the chat see
     host: keycloak.aisolate.example.com
@@ -286,7 +286,7 @@ platform:
       operators:
         ## @param platform.keycloak.realms.operators.name The operators' realm: the AIsolate UI (client aisolate-ui) and the CLI (aisolate-cli) sign in there; its realm roles aisolate-admin and aisolate-auditor
         name: aisolate
-        ## @param platform.keycloak.realms.operators.loginTheme The realm's login theme, one the image carries (aisolate-ui in the themed image); empty: Keycloak's own. Imported with the realm: an existing instance takes a new one through the admin console, or with a recreated claim
+        ## @param platform.keycloak.realms.operators.loginTheme The realm's login theme, one the image carries (aisolate-ui in the themed image); empty: Keycloak's own. Imported with the realm: change it later in the admin console or recreate the claim
         loginTheme: ""
       users:
         ## @param platform.keycloak.realms.users.name The application users' realm: the chat (client aisolate-chat, and any client it registers from platform.chat.host) signs its users in there; the roles the rules name are its realm roles
@@ -295,7 +295,7 @@ platform:
         loginTheme: ""
     ## @param platform.keycloak.demoUsers Create the demo cast at the first start (operators realm: admin, developer, auditor; users realm: jane the CEO, john the employee, auditor, with those realm roles), each with their password from the Secret
     demoUsers: false
-    ## @param platform.keycloak.existingSecret A Secret you create with Keycloak's admin password under the key admin-password (the demo admin's too) and, with demoUsers, developer-password, auditor-password, jane-password and john-password; empty: the chart generates the Secret keycloak with those keys and keeps it with lookup (set one for a render without a cluster, see persistence.postgres.existingSecret)
+    ## @param platform.keycloak.existingSecret A Secret with the admin password under admin-password (the demo admin's too) and, with demoUsers, developer-, auditor-, jane- and john-password; empty: generated as the Secret keycloak and kept (set one for a render without a cluster)
     existingSecret: ""
     ## @param platform.keycloak.resources [object] Keycloak container resources (requests, limits)
     resources: {}
@@ -340,7 +340,7 @@ persistence:
       pullPolicy: IfNotPresent
     ## @param persistence.postgres.resources [object] The backend's PostgreSQL container resources (requests, limits)
     resources: {}
-    ## @param persistence.postgres.existingSecret A Secret you create with the database password under the key password; empty: the chart generates the Secret db and keeps it with lookup, which a render without a cluster (Argo CD, helm template | kubectl apply) cannot see, so every sync makes a new password the kept database refuses: set one there
+    ## @param persistence.postgres.existingSecret A Secret with the database password under the key password; empty: the chart generates the Secret db and keeps it, which a render without a cluster (Argo CD, helm template) cannot: set one there
     existingSecret: ""
     storage:
       ## @param persistence.postgres.storage.size The size of the PersistentVolumeClaim db the database keeps its data on (the spaces, the airlocks, the audit trail); helm uninstall deletes it

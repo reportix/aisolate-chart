@@ -22,7 +22,7 @@
         },
         "headless": {
             "type": "boolean",
-            "description": "Install without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy. false adds the AIsolate UI (frontend, backend, the backend's database). A bool, never a string",
+            "description": "Without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy; false adds the UI (frontend, backend, its database). A bool, never a string",
             "default": true
         },
         "allowTags": {
@@ -188,7 +188,7 @@
                         },
                         "resources": {
                             "type": "object",
-                            "description": "Requests and limits of every airlock pod and discovery pod (cpu, memory, ephemeral-storage, which holds the airlock's fetched code in /tmp, at most 2Gi): one airlock's code or load must not starve its node",
+                            "description": "Requests and limits of every airlock and discovery pod (cpu, memory, ephemeral-storage: the fetched code lands in /tmp, at most 2Gi): one airlock's code or load must not starve its node",
                             "additionalProperties": true,
                             "default": "{}"
                         }
@@ -334,7 +334,7 @@
                         },
                         "tls": {
                             "type": "boolean",
-                            "description": "Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls; with the AIsolate UI also ui-tls and backend-tls, with the chat chat-tls, with the chart's Keycloak keycloak-tls), provided by the installer or cert-manager; on ingress-nginx the release host's certificate covers the controller's Ingresses too",
+                            "description": "Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls, ui-tls, backend-tls, chat-tls, keycloak-tls), from the installer or cert-manager",
                             "default": false
                         },
                         "annotations": {
@@ -351,7 +351,7 @@
                     "properties": {
                         "issuerUri": {
                             "type": "string",
-                            "description": "The application users' identity provider: the issuer the pods validate tokens against; the backend too unless operators.issuerUri is set; empty: the users realm of the chart's Keycloak (platform.keycloak.enabled), else required",
+                            "description": "The application users' identity provider: the issuer the pods validate tokens against, and the backend unless operators.issuerUri is set; empty: the chart's Keycloak users realm, else required",
                             "default": ""
                         },
                         "jwkSetUri": {
@@ -361,12 +361,12 @@
                         },
                         "rolesClaim": {
                             "type": "string",
-                            "description": "Dot path of the roles claim in the tokens: the AIsolate UI roles, and the roles the rules name (Entra ID app roles: roles; Okta: groups); the pods read it, the backend too unless operators.rolesClaim is set",
+                            "description": "Dot path of the roles claim in the tokens: the UI roles and the roles the rules name (Entra ID app roles: roles; Okta: groups); the pods read it, the backend unless operators.rolesClaim is set",
                             "default": "realm_access.roles"
                         },
                         "egress": {
                             "type": "object",
-                            "description": "The provider as a NetworkPolicy peer, when it runs in the cluster or at a private address: namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required); empty: the chart's Keycloak when it answers, else the backend reaches it over HTTPS at a public address",
+                            "description": "The provider as a NetworkPolicy peer, in the cluster or at a private address: namespaceSelector and podSelector, or cidr (/8 or longer), plus port (required); empty: Keycloak's, else public HTTPS",
                             "additionalProperties": true,
                             "default": "{}"
                         },
@@ -421,7 +421,7 @@
                             "properties": {
                                 "cidr": {
                                     "type": "string",
-                                    "description": "The Kubernetes API server's address, the controller's and the backend's way to it, e.g. the kubernetes Endpoints' IP/32 (kubectl get endpoints kubernetes -n default); empty: any address on the ports, which the install's notes warn of (on Cilium an ipBlock does not match a node-hosted API server: leave it empty there)",
+                                    "description": "The Kubernetes API server's address, the controller's and the backend's way to it, e.g. the kubernetes Endpoints' IP/32; empty: any address on the ports (the notes warn; leave empty on Cilium)",
                                     "default": ""
                                 },
                                 "ports": {
@@ -433,7 +433,7 @@
                         },
                         "hosts": {
                             "type": "object",
-                            "description": "The hosts of every LLM and data source defined for all of AIsolate or by a space or an airlock, each with its NetworkPolicy peer: cidr (/8 or longer), or namespaceSelector and podSelector, never both, plus port (required); an airlock that resolves an unmapped host is Invalid, and a global entry with one is left out of every catalog; a host on platform.egress.proxy.domains needs no entry",
+                            "description": "The hosts of every LLM and data source, each with its NetworkPolicy peer (cidr /8 or longer, or namespaceSelector and podSelector, plus port): an airlock resolving an unmapped host is Invalid, a global entry with one is left out of every catalog; a host on platform.egress.proxy.domains needs no entry",
                             "additionalProperties": true,
                             "default": "{}"
                         },
@@ -494,7 +494,7 @@
                     "properties": {
                         "otlpEndpoint": {
                             "type": "string",
-                            "description": "OTLP/HTTP base URL the airlock and tool server pods send their traces to, e.g. an OpenTelemetry Collector, http://otel-collector.monitoring.svc:4318 (the pods append /v1/traces); its host must be in platform.egress.hosts or proxied, or every space is Invalid; empty: no trace leaves the pods",
+                            "description": "OTLP/HTTP base URL the pods send traces to, e.g. http://otel-collector.monitoring.svc:4318 (/v1/traces is appended); its host must be in platform.egress.hosts or proxied, or every space is Invalid; empty: no traces",
                             "default": ""
                         }
                     }
@@ -522,7 +522,7 @@
                     "properties": {
                         "queryUrl": {
                             "type": "string",
-                            "description": "The Prometheus HTTP API the backend reads, e.g. http://prometheus.monitoring.svc:9090, or any store that answers /api/v1/query and /api/v1/query_range alike; its series need the space label; empty: no Metrics tab",
+                            "description": "The Prometheus HTTP API the backend reads, e.g. http://prometheus.monitoring.svc:9090 (or any store answering /api/v1/query and /query_range); its series need the space label; empty: no Metrics tab",
                             "default": ""
                         },
                         "egress": {
@@ -539,7 +539,7 @@
                     "properties": {
                         "failClosed": {
                             "type": "boolean",
-                            "description": "While an airlock pod's on-disk buffer of lines the backend has not taken is full, it refuses new questions with 503 \"audit unavailable\"; false: it answers and the line is lost from the backend's trail (stdout keeps it)",
+                            "description": "While an airlock pod's disk buffer of audit lines the backend has not taken is full, it refuses questions with 503 \"audit unavailable\"; false: it answers, and the line is lost from the trail (stdout keeps it)",
                             "default": true
                         },
                         "stdout": {
@@ -554,7 +554,7 @@
                         },
                         "existingSecret": {
                             "type": "string",
-                            "description": "An existing Secret holding the audit ingest key under the key key; set: the chart creates no audit-ingest Secret and hashes none into the pod checksums, recommended for a render without cluster access (Argo CD, helm template), where lookup cannot keep the generated key; empty: the chart generates and keeps one",
+                            "description": "An existing Secret with the audit ingest key under the key key: no audit-ingest Secret and no checksum then; set it for a render without a cluster (Argo CD, helm template); empty: generated and kept",
                             "default": ""
                         }
                     }
@@ -565,7 +565,7 @@
                     "properties": {
                         "existingSecret": {
                             "type": "string",
-                            "description": "An existing Secret holding the key the backend seals typed API keys and passwords with, under the key key (32+ characters); set: the chart creates no credentials-key Secret and hashes none into the backend's checksum, recommended for a render without cluster access (Argo CD, helm template); empty: the chart generates and keeps one",
+                            "description": "An existing Secret with the key the backend seals credentials with (32+ characters) under the key key: no credentials-key Secret or checksum then; for a render without a cluster; empty: generated",
                             "default": ""
                         }
                     }
@@ -687,7 +687,7 @@
                     "properties": {
                         "enabled": {
                             "type": "boolean",
-                            "description": "Install a Keycloak of the chart's own, a demo and trial identity provider with the two realms AIsolate needs: platform.identity and platform.identity.operators then default to its realms; a production install names its own provider there instead",
+                            "description": "Install the chart's own Keycloak, a demo identity provider with the two realms AIsolate needs; platform.identity and platform.identity.operators then default to them (production names its own)",
                             "default": false
                         },
                         "host": {
@@ -741,7 +741,7 @@
                                         },
                                         "loginTheme": {
                                             "type": "string",
-                                            "description": "The realm's login theme, one the image carries (aisolate-ui in the themed image); empty: Keycloak's own. Imported with the realm: an existing instance takes a new one through the admin console, or with a recreated claim",
+                                            "description": "The realm's login theme, one the image carries (aisolate-ui in the themed image); empty: Keycloak's own. Imported with the realm: change it later in the admin console or recreate the claim",
                                             "default": ""
                                         }
                                     }
@@ -771,7 +771,7 @@
                         },
                         "existingSecret": {
                             "type": "string",
-                            "description": "A Secret you create with Keycloak's admin password under the key admin-password (the demo admin's too) and, with demoUsers, developer-password, auditor-password, jane-password and john-password; empty: the chart generates the Secret keycloak with those keys and keeps it with lookup (set one for a render without a cluster, see persistence.postgres.existingSecret)",
+                            "description": "A Secret with the admin password under admin-password (the demo admin's too) and, with demoUsers, developer-, auditor-, jane- and john-password; empty: generated as the Secret keycloak and kept (set one for a render without a cluster)",
                             "default": ""
                         },
                         "resources": {
@@ -900,7 +900,7 @@
                         },
                         "existingSecret": {
                             "type": "string",
-                            "description": "A Secret you create with the database password under the key password; empty: the chart generates the Secret db and keeps it with lookup, which a render without a cluster (Argo CD, helm template | kubectl apply) cannot see, so every sync makes a new password the kept database refuses: set one there",
+                            "description": "A Secret with the database password under the key password; empty: the chart generates the Secret db and keeps it, which a render without a cluster (Argo CD, helm template) cannot: set one there",
                             "default": ""
                         },
                         "storage": {

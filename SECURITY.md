@@ -22,8 +22,8 @@ vulnerability, whatever the component. Where each guarantee is enforced: AIsolat
 
 ## Reporting
 
-Do not open a public issue. Report privately through a confidential issue in this project's issue tracker
-(tick *Confidential*) or security@reportix.com. Include the chart version, the values (without their secrets)
+Do not open a public issue. Report privately to security@reportix.com or, where this repository offers it, through GitHub's
+private vulnerability reporting. Include the chart version, the values (without their secrets)
 and the rendered object that shows the problem; a failing render invariant is the best report. We confirm
 receipt, keep you informed while we fix it, and credit you in the fix unless you prefer otherwise.
 
