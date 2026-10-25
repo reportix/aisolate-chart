@@ -47,10 +47,12 @@ kubectl label namespace aisolate pod-security.kubernetes.io/enforce=restricted
 ## 2. Customize the values
 
 Start from `examples/example-values.yaml`:
-- every AIsolate image by digest: with `allowTags=false`, the default, a tag-only image fails the render.
-  The airlock and tool server come twice, `platform.airlock`/`platform.toolServer` (Java) and
-  `platform.airlockPython`/`platform.toolServerPython`: the controller runs an airlock's pods on the pair of
-  its code's language
+- the AIsolate images, only where you mirror or build them: a published chart pulls each from
+  `docker-public.sonatype.reportix.com`, pinned by digest to its appVersion. `allowTags=true` is only for a cluster
+  that builds its own images, each under its own `registry` (empty for an image loaded into the nodes); with
+  `allowTags=false`, the default, a tag-only image fails the render. The airlock and tool server come twice,
+  `platform.airlock`/`platform.toolServer` (Java) and `platform.airlockPython`/`platform.toolServerPython`: the
+  controller runs an airlock's pods on the pair of its code's language
 - the users' identity provider under `platform.identity`, and optionally one of AIsolate's own for the dashboard and the CLI under `platform.identity.operators` (empty: the users'); a separate operators' host needs its own
   `platform.identity.operators.egress`, or the backend cannot reach it
 - the cluster's DNS and ingress peers under `platform.egress`
