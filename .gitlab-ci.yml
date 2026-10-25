@@ -1,7 +1,7 @@
 # test_render checks the chart on every push, on a public image. Reportix's release component publishes it:
 # every commit on main to helm-internal as <version>-<sha10>, a bare semver tag X.Y.Z equal to Chart.yaml's
 # version to the world-readable helm-public after verify-release; verify-version makes every branch bump the
-# version. chart_image_gate stays off: it does not understand digest pins.
+# version. chart_image_gate stays off, since it does not understand digest pins; verify-pins stands in for it.
 include:
   - component: $CI_SERVER_FQDN/reportix/ci-templates/release@1
     inputs:
@@ -42,3 +42,16 @@ test_render:
     paths:
       - tests/chart/actual-results
     expire_in: 1 week
+
+# A tag publishes values.yaml as it stands: without the digests scripts/pin-release.sh writes, the chart would not render.
+verify-pins:
+  extends: .helm
+  stage: test
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - |
+      for key in controller airlock toolServer airlockPython toolServerPython backend frontend chat; do
+        k=$key yq -e '.platform[strenv(k)].image.digest | test("^sha256:[a-f0-9]{64}$")' chart/values.yaml >/dev/null \
+          || { echo "platform.$key.image.digest is not pinned: run scripts/pin-release.sh before tagging" >&2; exit 1; }
+      done
