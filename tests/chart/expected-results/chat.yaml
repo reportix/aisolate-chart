@@ -191,7 +191,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: chat
-          image: aisolate/chat@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+          image: docker-public.sonatype.reportix.com/aisolate/chat@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -232,7 +232,7 @@ spec:
       labels:
         aisolate.dev/role: controller
       annotations:
-        aisolate.dev/settings: "aisolate:\n  controller:\n    namespace: aisolate\n    ingress:\n      host: \"aisolate.example.com\"\n      className: \"nginx\"\n      publicUrl: \"https://aisolate.example.com\"\n    images:\n      airlock: aisolate/airlock@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n      toolServer: aisolate/tool-server@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\n      airlockPython: aisolate/airlock-python@sha256:9999999999999999999999999999999999999999999999999999999999999999\n      toolServerPython: aisolate/tool-server-python@sha256:8888888888888888888888888888888888888888888888888888888888888888\n      pullPolicy: IfNotPresent\n      allowTags: false\n    identity:\n      issuerUri: \"https://idp.example.com/realms/customer\"\n      jwkSetUri: \"\"\n      rolesClaim: \"realm_access.roles\"\n      egress:\n        \n    egress:\n      dns:\n        \n        namespaceSelector:\n          \"[kubernetes.io/metadata.name]\": \"kube-system\"\n        podSelector:\n          \"[k8s-app]\": \"kube-dns\"\n        port: 53\n      ingressFrom:\n        \n        namespaceSelector:\n          \"[kubernetes.io/metadata.name]\": \"ingress-nginx\"\n      hosts: {}\n      proxy:\n        enabled: false\n        host: egress\n        port: 3128\n        domains: []\n    airlockPods:\n      replicas: 1\n      runtimeClassName: \"\"\n    scheduling:\n      nodeSelector: {}\n      tolerations: []\n    corsAllowedOrigins: \"\"\n    observability:\n      otlpEndpoint: \"\"\n    code:\n      url: \"\"\n    audit:\n      url: \"\"\n      failClosed: true\n      stdout: true\n    resources:\n      airlock: {\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"1536Mi\"},\"requests\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"768Mi\"}}\n      toolServer: {\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"1Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"512Mi\"}}"
+        aisolate.dev/settings: "aisolate:\n  controller:\n    namespace: aisolate\n    ingress:\n      host: \"aisolate.example.com\"\n      className: \"nginx\"\n      publicUrl: \"https://aisolate.example.com\"\n    images:\n      airlock: docker-public.sonatype.reportix.com/aisolate/airlock@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n      toolServer: docker-public.sonatype.reportix.com/aisolate/tool-server@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\n      airlockPython: docker-public.sonatype.reportix.com/aisolate/airlock-python@sha256:9999999999999999999999999999999999999999999999999999999999999999\n      toolServerPython: docker-public.sonatype.reportix.com/aisolate/tool-server-python@sha256:8888888888888888888888888888888888888888888888888888888888888888\n      pullPolicy: IfNotPresent\n      allowTags: false\n    identity:\n      issuerUri: \"https://idp.example.com/realms/customer\"\n      jwkSetUri: \"\"\n      rolesClaim: \"realm_access.roles\"\n      egress:\n        \n    egress:\n      dns:\n        \n        namespaceSelector:\n          \"[kubernetes.io/metadata.name]\": \"kube-system\"\n        podSelector:\n          \"[k8s-app]\": \"kube-dns\"\n        port: 53\n      ingressFrom:\n        \n        namespaceSelector:\n          \"[kubernetes.io/metadata.name]\": \"ingress-nginx\"\n      hosts: {}\n      proxy:\n        enabled: false\n        host: egress\n        port: 3128\n        domains: []\n    airlockPods:\n      replicas: 1\n      runtimeClassName: \"\"\n    scheduling:\n      nodeSelector: {}\n      tolerations: []\n    corsAllowedOrigins: \"\"\n    observability:\n      otlpEndpoint: \"\"\n    code:\n      url: \"\"\n    audit:\n      url: \"\"\n      failClosed: true\n      stdout: true\n    resources:\n      airlock: {\"limits\":{\"cpu\":\"2\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"1536Mi\"},\"requests\":{\"cpu\":\"250m\",\"ephemeral-storage\":\"256Mi\",\"memory\":\"768Mi\"}}\n      toolServer: {\"limits\":{\"cpu\":\"1\",\"ephemeral-storage\":\"4Gi\",\"memory\":\"1Gi\"},\"requests\":{\"cpu\":\"100m\",\"ephemeral-storage\":\"128Mi\",\"memory\":\"512Mi\"}}"
     spec:
       serviceAccountName: aisolate-controller
       securityContext:
@@ -241,7 +241,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: controller
-          image: aisolate/controller@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          image: docker-public.sonatype.reportix.com/aisolate/controller@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           imagePullPolicy: IfNotPresent
           env:
             - name: POD_NAMESPACE

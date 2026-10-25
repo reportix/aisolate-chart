@@ -186,10 +186,11 @@ err=$(render_with --values "$values/headless.yaml" --set platform.controller.ima
 echo "$err" | grep -q "is not sha256: and 64 hex digits" || fail "the render failed, but not on the digest format: $err"
 
 echo "without allowTags a tag-only image is refused, with or without the AIsolate UI"
-err=$(render_with 2>&1 >/dev/null) && fail "the chart rendered without digests"
-echo "$err" | grep -q "needs a digest" || fail "the render failed, but not on the digest rule: $err"
-err=$(render_with --values "$values/headless.yaml" --set headless=false 2>&1 >/dev/null) && fail "the AIsolate UI rendered without digests"
-echo "$err" | grep -q "needs a digest" || fail "the AIsolate UI's render failed, but not on the digest rule: $err"
+# Each clears a digest itself: scripts/pin-release.sh fills the chart's own.
+err=$(render_with --values "$values/headless.yaml" --set platform.controller.image.digest= 2>&1 >/dev/null) && fail "the chart rendered the controller with its digest cleared"
+echo "$err" | grep -q "aisolate/controller needs a digest" || fail "the render failed, but not on the controller's cleared digest: $err"
+err=$(render_with --values "$values/ui.yaml" --set platform.backend.image.digest= 2>&1 >/dev/null) && fail "the AIsolate UI rendered the backend with its digest cleared"
+echo "$err" | grep -q "aisolate/backend needs a digest" || fail "the AIsolate UI's render failed, but not on the backend's cleared digest: $err"
 
 echo "an egress peer with an open cidr, a cidr next to selectors or no port is refused"
 err=$(render_with --values "$values/headless.yaml" --set 'platform.egress.hosts.db\.example\.com.cidr=0.0.0.0/0' --set 'platform.egress.hosts.db\.example\.com.port=5432' 2>&1 >/dev/null) && fail "the chart rendered a 0.0.0.0/0 peer"

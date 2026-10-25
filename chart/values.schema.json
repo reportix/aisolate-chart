@@ -110,8 +110,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Controller image registry",
-                                    "default": ""
+                                    "description": "Controller image registry; the default is the public one, whose image the chart pins by digest",
+                                    "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
                                     "type": "string",
@@ -164,8 +164,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Airlock image registry",
-                                    "default": ""
+                                    "description": "Airlock image registry; the default is the public one, whose image the chart pins by digest",
+                                    "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
                                     "type": "string",
@@ -222,8 +222,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Tool server image registry",
-                                    "default": ""
+                                    "description": "Tool server image registry; the default is the public one, whose image the chart pins by digest",
+                                    "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
                                     "type": "string",
@@ -260,8 +260,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Python airlock image registry",
-                                    "default": ""
+                                    "description": "Python airlock image registry; the default is the public one, whose image the chart pins by digest",
+                                    "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
                                     "type": "string",
@@ -292,8 +292,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Python tool server image registry",
-                                    "default": ""
+                                    "description": "Python tool server image registry; the default is the public one, whose image the chart pins by digest",
+                                    "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
                                     "type": "string",
@@ -609,8 +609,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "AIsolate UI image registry",
-                                    "default": ""
+                                    "description": "AIsolate UI image registry; the default is the public one, whose image the chart pins by digest",
+                                    "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
                                     "type": "string",
@@ -668,8 +668,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Chat image registry",
-                                    "default": ""
+                                    "description": "Chat image registry; the default is the public one, whose image the chart pins by digest",
+                                    "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
                                     "type": "string",
@@ -855,8 +855,8 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Backend image registry",
-                                    "default": ""
+                                    "description": "Backend image registry; the default is the public one, whose image the chart pins by digest",
+                                    "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
                                     "type": "string",

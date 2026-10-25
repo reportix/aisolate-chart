@@ -44,8 +44,8 @@ test:
 platform:
   controller:
     image:
-      ## @param platform.controller.image.registry Controller image registry
-      registry: ""
+      ## @param platform.controller.image.registry Controller image registry; the default is the public one, whose image the chart pins by digest
+      registry: docker-public.sonatype.reportix.com
       ## @param platform.controller.image.repository Controller image repository
       repository: aisolate/controller
       ## @param platform.controller.image.tag Controller image tag, used only with allowTags; empty: the chart's appVersion
@@ -63,8 +63,8 @@ platform:
 
   airlock:
     image:
-      ## @param platform.airlock.image.registry Airlock image registry
-      registry: ""
+      ## @param platform.airlock.image.registry Airlock image registry; the default is the public one, whose image the chart pins by digest
+      registry: docker-public.sonatype.reportix.com
       ## @param platform.airlock.image.repository Airlock image repository: the core of every airlock pod the controller renders
       repository: aisolate/airlock
       ## @param platform.airlock.image.tag Airlock image tag, used only with allowTags; empty: the chart's appVersion
@@ -86,8 +86,8 @@ platform:
 
   toolServer:
     image:
-      ## @param platform.toolServer.image.registry Tool server image registry
-      registry: ""
+      ## @param platform.toolServer.image.registry Tool server image registry; the default is the public one, whose image the chart pins by digest
+      registry: docker-public.sonatype.reportix.com
       ## @param platform.toolServer.image.repository Tool server image repository: one pod per airlock, rendered by the controller
       repository: aisolate/tool-server
       ## @param platform.toolServer.image.tag Tool server image tag, used only with allowTags; empty: the chart's appVersion
@@ -103,8 +103,8 @@ platform:
   ## (spec.jar.language: python), with the Java pods' pull policy, replicas and resources.
   airlockPython:
     image:
-      ## @param platform.airlockPython.image.registry Python airlock image registry
-      registry: ""
+      ## @param platform.airlockPython.image.registry Python airlock image registry; the default is the public one, whose image the chart pins by digest
+      registry: docker-public.sonatype.reportix.com
       ## @param platform.airlockPython.image.repository Python airlock image repository: the airlock pod of an airlock with Python code
       repository: aisolate/airlock-python
       ## @param platform.airlockPython.image.tag Python airlock image tag, used only with allowTags; empty: the chart's appVersion
@@ -114,8 +114,8 @@ platform:
 
   toolServerPython:
     image:
-      ## @param platform.toolServerPython.image.registry Python tool server image registry
-      registry: ""
+      ## @param platform.toolServerPython.image.registry Python tool server image registry; the default is the public one, whose image the chart pins by digest
+      registry: docker-public.sonatype.reportix.com
       ## @param platform.toolServerPython.image.repository Python tool server image repository: the MCP server of an airlock with Python code
       repository: aisolate/tool-server-python
       ## @param platform.toolServerPython.image.tag Python tool server image tag, used only with allowTags; empty: the chart's appVersion
@@ -240,8 +240,8 @@ platform:
     ## @param platform.frontend.host AIsolate UI host (headless=false)
     host: ui.aisolate.example.com
     image:
-      ## @param platform.frontend.image.registry AIsolate UI image registry
-      registry: ""
+      ## @param platform.frontend.image.registry AIsolate UI image registry; the default is the public one, whose image the chart pins by digest
+      registry: docker-public.sonatype.reportix.com
       ## @param platform.frontend.image.repository AIsolate UI image repository; the image carries the backend's URL and the operators' identity provider from its build (NEXT_PUBLIC_AISOLATE_URL, NEXT_PUBLIC_OIDC_AUTHORITY)
       repository: aisolate/ui
       ## @param platform.frontend.image.tag AIsolate UI image tag, used only with allowTags; empty: the chart's appVersion
@@ -261,8 +261,8 @@ platform:
     ## @param platform.chat.host The chat's host; add its origin to platform.airlock.corsAllowedOrigins
     host: chat.aisolate.example.com
     image:
-      ## @param platform.chat.image.registry Chat image registry
-      registry: ""
+      ## @param platform.chat.image.registry Chat image registry; the default is the public one, whose image the chart pins by digest
+      registry: docker-public.sonatype.reportix.com
       ## @param platform.chat.image.repository Chat image repository; the image carries the release's URL from its build (NEXT_PUBLIC_AISOLATE_URL, a build arg of its Dockerfile)
       repository: aisolate/chat
       ## @param platform.chat.image.tag Chat image tag, used only with allowTags; empty: the chart's appVersion
@@ -325,8 +325,8 @@ platform:
     ## @param platform.backend.host Backend host (headless=false): the AIsolate UI's API and the CLI's endpoint
     host: api.aisolate.example.com
     image:
-      ## @param platform.backend.image.registry Backend image registry
-      registry: ""
+      ## @param platform.backend.image.registry Backend image registry; the default is the public one, whose image the chart pins by digest
+      registry: docker-public.sonatype.reportix.com
       ## @param platform.backend.image.repository Backend image repository
       repository: aisolate/backend
       ## @param platform.backend.image.tag Backend image tag, used only with allowTags; empty: the chart's appVersion
