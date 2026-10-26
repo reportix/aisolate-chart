@@ -27,8 +27,8 @@
         },
         "allowTags": {
             "type": "boolean",
-            "description": "Let tag-only images render, for clusters that build their own images; off, every AIsolate image needs its digest",
-            "default": false
+            "description": "Let tag-only images render; the published chart pins every AIsolate image by tag, so this is on. Off, every AIsolate image needs its digest",
+            "default": true
         },
         "extraDeploy": {
             "type": "array",
@@ -98,7 +98,7 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Controller image registry; the default is the public one, whose image the chart pins by digest",
+                                    "description": "Controller image registry; the default is the public one, whose image the chart pins by tag",
                                     "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
@@ -113,7 +113,7 @@
                                 },
                                 "digest": {
                                     "type": "string",
-                                    "description": "Controller image digest (sha256:…); required unless allowTags",
+                                    "description": "Controller image digest (sha256:…), optional; wins over the tag",
                                     "default": ""
                                 },
                                 "pullPolicy": {
@@ -146,7 +146,7 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Airlock image registry; the default is the public one, whose image the chart pins by digest",
+                                    "description": "Airlock image registry; the default is the public one, whose image the chart pins by tag",
                                     "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
@@ -161,7 +161,7 @@
                                 },
                                 "digest": {
                                     "type": "string",
-                                    "description": "Airlock image digest (sha256:…); required unless allowTags",
+                                    "description": "Airlock image digest (sha256:…), optional; wins over the tag",
                                     "default": ""
                                 },
                                 "pullPolicy": {
@@ -204,7 +204,7 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Tool server image registry; the default is the public one, whose image the chart pins by digest",
+                                    "description": "Tool server image registry; the default is the public one, whose image the chart pins by tag",
                                     "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
@@ -219,7 +219,7 @@
                                 },
                                 "digest": {
                                     "type": "string",
-                                    "description": "Tool server image digest (sha256:…); required unless allowTags",
+                                    "description": "Tool server image digest (sha256:…), optional; wins over the tag",
                                     "default": ""
                                 }
                             }
@@ -242,7 +242,7 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Python airlock image registry; the default is the public one, whose image the chart pins by digest",
+                                    "description": "Python airlock image registry; the default is the public one, whose image the chart pins by tag",
                                     "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
@@ -257,7 +257,7 @@
                                 },
                                 "digest": {
                                     "type": "string",
-                                    "description": "Python airlock image digest (sha256:…); required unless allowTags",
+                                    "description": "Python airlock image digest (sha256:…), optional; wins over the tag",
                                     "default": ""
                                 }
                             }
@@ -274,7 +274,7 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Python tool server image registry; the default is the public one, whose image the chart pins by digest",
+                                    "description": "Python tool server image registry; the default is the public one, whose image the chart pins by tag",
                                     "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
@@ -289,7 +289,7 @@
                                 },
                                 "digest": {
                                     "type": "string",
-                                    "description": "Python tool server image digest (sha256:…); required unless allowTags",
+                                    "description": "Python tool server image digest (sha256:…), optional; wins over the tag",
                                     "default": ""
                                 }
                             }
@@ -600,7 +600,7 @@
                                 },
                                 "digest": {
                                     "type": "string",
-                                    "description": "AIsolate UI image digest (sha256:…); required unless allowTags",
+                                    "description": "AIsolate UI image digest (sha256:…), optional; wins over the tag",
                                     "default": ""
                                 },
                                 "pullPolicy": {
@@ -653,7 +653,7 @@
                                 },
                                 "digest": {
                                     "type": "string",
-                                    "description": "Chat image digest (sha256:…); required unless allowTags",
+                                    "description": "Chat image digest (sha256:…), optional; wins over the tag",
                                     "default": ""
                                 },
                                 "pullPolicy": {
@@ -813,7 +813,7 @@
                             "properties": {
                                 "registry": {
                                     "type": "string",
-                                    "description": "Backend image registry; the default is the public one, whose image the chart pins by digest",
+                                    "description": "Backend image registry; the default is the public one, whose image the chart pins by tag",
                                     "default": "docker-public.sonatype.reportix.com"
                                 },
                                 "repository": {
@@ -828,7 +828,7 @@
                                 },
                                 "digest": {
                                     "type": "string",
-                                    "description": "Backend image digest (sha256:…); required unless allowTags",
+                                    "description": "Backend image digest (sha256:…), optional; wins over the tag",
                                     "default": ""
                                 },
                                 "pullPolicy": {

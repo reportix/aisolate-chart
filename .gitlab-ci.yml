@@ -1,7 +1,9 @@
 # test_render checks the chart on every push. Reportix's release component publishes it:
 # every commit on main to helm-internal as <version>-<sha10>, a bare semver tag X.Y.Z equal to Chart.yaml's
 # version to the world-readable helm-public after verify-release; verify-version makes every branch bump the
-# version. chart_image_gate stays off, since it does not understand digest pins; verify-pins stands in for it.
+# version. The chart deploy/release flow: aisolate/aisolate's release-deploy lands the seven image tags on the
+# bot branch next (gate-exempt), chart-prepare-release promotes them to docker-public, chart_image_gate fails a
+# tag whose values still name an image the public channel lacks.
 include:
   - component: $CI_SERVER_FQDN/reportix/ci-templates/release@1
     inputs:
@@ -12,6 +14,8 @@ include:
       internal_publish_command: 'helm-publish.sh --chart-dir chart --version "$RESOLVED_VERSION" --on-conflict overwrite --repo-url https://sonatype.reportix.com/repository/helm-${PUBLISH_CHANNEL}'
       release_publish_command: 'helm-publish.sh --chart-dir chart --on-conflict fail --repo-url https://sonatype.reportix.com/repository/helm-${PUBLISH_CHANNEL}'
       version_gate: increase
+      version_gate_exempt_branch: next
+      chart_image_gate: "true"
 
 stages: [test, publish-internal, publish-release]
 
@@ -30,18 +34,9 @@ test_render:
       - tests/chart/actual-results
     expire_in: 1 week
 
-# A release tag publishes values.yaml as it stands: --check fails unless its digests are what the registry serves for
-# Chart.yaml's appVersion, so neither an unpinned chart nor a hand-edited appVersion is published.
-verify-pins:
-  extends: .helm
-  stage: test
-  rules:
-    - if: $CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+$/
-  script:
-    - scripts/pin-release.sh --check
-
 # The chart end to end (tests/e2e/run.sh) on a kind cluster in the job's dind sidecar, with the app's snapshot images
-# from docker-internal: AISOLATE_IMAGE_TAG is a <version>-<sha10> that aisolate/aisolate's main pipeline published.
+# from docker-internal: AISOLATE_IMAGE_TAG is a <version>-<sha10> that aisolate/aisolate's main pipeline published;
+# empty, the controller's tag in chart/values.yaml, which the deploy bot keeps at main's newest.
 # The runner's docker-login.sh gives the job's Docker the SONATYPE_* credentials; run.sh pulls the two images there and
 # loads them into kind, so the cluster needs no pull Secret. Manual and allowed to fail until it has passed here.
 # Before `when: manual` goes:
@@ -77,5 +72,6 @@ test_deploy:
     - echo "$KIND_SHA256  /usr/local/bin/kind" | sha256sum -c -
     - chmod +x /usr/local/bin/kind
   script:
+    - 'AISOLATE_IMAGE_TAG=${AISOLATE_IMAGE_TAG:-$(yq ".platform.controller.image.tag" chart/values.yaml)}'
     - test -n "$AISOLATE_IMAGE_TAG" || { echo "set AISOLATE_IMAGE_TAG to a <version>-<sha10> of aisolate/aisolate's main pipeline" >&2; exit 1; }
     - tests/e2e/run.sh --images "docker-internal.sonatype.reportix.com/aisolate:$AISOLATE_IMAGE_TAG"

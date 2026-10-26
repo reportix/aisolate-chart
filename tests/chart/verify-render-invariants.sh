@@ -224,10 +224,10 @@ jq -e '([.panels[].datasource.type] | unique) == ["prometheus"] and ([.templatin
 echo "images: a digest that is not sha256: and 64 hex digits, a tag without allowTags and an open or half-named egress peer are refused; global.imageRegistry reaches every image"
 err=$(render_with --values "$values/headless.yaml" --set platform.controller.image.digest=sha256:aa 2>&1 >/dev/null) && fail "the chart rendered a short digest"
 echo "$err" | grep -q "is not sha256: and 64 hex digits" || fail "the render failed, but not on the digest format: $err"
-# Each clears a digest itself: scripts/pin-release.sh fills the chart's own.
-err=$(render_with --values "$values/headless.yaml" --set platform.controller.image.digest= 2>&1 >/dev/null) && fail "the chart rendered the controller with its digest cleared"
+# allowTags is on by default (tag pins); off, a cleared digest is refused.
+err=$(render_with --values "$values/headless.yaml" --set allowTags=false --set platform.controller.image.digest= 2>&1 >/dev/null) && fail "the chart rendered the controller with its digest cleared"
 echo "$err" | grep -q "aisolate/controller needs a digest" || fail "the render failed, but not on the controller's cleared digest: $err"
-err=$(render_with "${ui_args[@]}" --set platform.backend.image.digest= 2>&1 >/dev/null) && fail "the AIsolate UI rendered the backend with its digest cleared"
+err=$(render_with "${ui_args[@]}" --set allowTags=false --set platform.backend.image.digest= 2>&1 >/dev/null) && fail "the AIsolate UI rendered the backend with its digest cleared"
 echo "$err" | grep -q "aisolate/backend needs a digest" || fail "the AIsolate UI's render failed, but not on the backend's cleared digest: $err"
 err=$(render_with --values "$values/headless.yaml" --set 'platform.egress.hosts.db\.example\.com.cidr=0.0.0.0/0' --set 'platform.egress.hosts.db\.example\.com.port=5432' 2>&1 >/dev/null) && fail "the chart rendered a 0.0.0.0/0 peer"
 echo "$err" | grep -q "too wide" || fail "the render failed, but not on the cidr width: $err"
