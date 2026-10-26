@@ -16,6 +16,9 @@ include:
       version_gate: increase
       version_gate_exempt_branch: next
       chart_image_gate: "true"
+      # The chart refuses a bare-defaults render (platform.identity.issuerUri is required unless Keycloak is on), so
+      # the gate renders it with the headless test scenario.
+      chart_gate_values: tests/chart/values/headless.yaml
 
 stages: [test, publish-internal, publish-release]
 
