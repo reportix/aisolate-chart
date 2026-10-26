@@ -1083,7 +1083,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: build
-          image: quay.io/keycloak/keycloak@sha256:29be7252db0a106f1cd2ac17b9a56ff2668073da645638a38b9fc67deeb2d6c4
+          image: docker-public.sonatype.reportix.com/aisolate/keycloak@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
           imagePullPolicy: IfNotPresent
           command: [/bin/bash, -c, "/opt/keycloak/bin/kc.sh build --db=dev-file --health-enabled=true && cp -r /opt/keycloak/lib/quarkus/. /build/"]
           resources:
@@ -1098,7 +1098,7 @@ spec:
               mountPath: /build
       containers:
         - name: keycloak
-          image: quay.io/keycloak/keycloak@sha256:29be7252db0a106f1cd2ac17b9a56ff2668073da645638a38b9fc67deeb2d6c4
+          image: docker-public.sonatype.reportix.com/aisolate/keycloak@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
           imagePullPolicy: IfNotPresent
           args: [start, --optimized, --import-realm]
           env:

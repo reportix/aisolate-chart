@@ -22,3 +22,11 @@ platform:
     image:
       registry: docker-public.sonatype.reportix.com
       digest: sha256:8888888888888888888888888888888888888888888888888888888888888888
+  backend:
+    image:
+      registry: docker-public.sonatype.reportix.com
+      digest: sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+  keycloak:
+    image:
+      registry: docker-public.sonatype.reportix.com
+      digest: sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
