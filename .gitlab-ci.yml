@@ -1,4 +1,4 @@
-# test_render checks the chart on every push, on a public image. Reportix's release component publishes it:
+# test_render checks the chart on every push. Reportix's release component publishes it:
 # every commit on main to helm-internal as <version>-<sha10>, a bare semver tag X.Y.Z equal to Chart.yaml's
 # version to the world-readable helm-public after verify-release; verify-version makes every branch bump the
 # version. chart_image_gate stays off, since it does not understand digest pins; verify-pins stands in for it.
@@ -16,21 +16,8 @@ include:
 stages: [test, publish-internal, publish-release]
 
 .helm:
-  image: debian:bookworm-slim
-  variables:
-    # A version bump changes its checksum: helm's .sha256sum file, yq's checksums (SHA-256 column).
-    HELM_VERSION: v3.18.4
-    HELM_SHA256: f8180838c23d7c7d797b208861fecb591d9ce1690d8704ed1e4cb8e2add966c1
-    YQ_VERSION: v4.47.1
-    YQ_SHA256: 0fb28c6680193c41b364193d0c0fc4a03177aecde51cfc04d506b1517158c2fb
-  before_script:
-    - apt-get update && apt-get install -y --no-install-recommends ca-certificates curl jq
-    - curl -fsSL -o /tmp/helm.tar.gz "https://get.helm.sh/helm-$HELM_VERSION-linux-amd64.tar.gz"
-    - echo "$HELM_SHA256  /tmp/helm.tar.gz" | sha256sum -c -
-    - tar -xzf /tmp/helm.tar.gz -C /usr/local/bin --strip-components=1 linux-amd64/helm
-    - curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/$YQ_VERSION/yq_linux_amd64"
-    - echo "$YQ_SHA256  /usr/local/bin/yq" | sha256sum -c -
-    - chmod +x /usr/local/bin/yq
+  # The fleet's generic image ships helm, yq, kubectl and docker.
+  image: docker-internal.sonatype.reportix.com/reportix/ci-images/generic:latest
 
 test_render:
   extends: .helm
