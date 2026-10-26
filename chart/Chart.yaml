@@ -14,7 +14,7 @@ sources:
 annotations:
   artifacthub.io/license: AGPL-3.0-only
 version: 0.2.5
-appVersion: "0.1.0"
+appVersion: "0.1.5"
 kubeVersion: ">=1.29.0-0"
 keywords: [
   aisolate,
