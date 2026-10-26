@@ -4,7 +4,8 @@
 ## @param global.imagePullSecrets Pull Secret names for the chart's own pods (the controller-rendered pods run as the namespace's default ServiceAccount: give it the Secret, see README)
 global:
   imageRegistry: ""
-  imagePullSecrets: []
+  imagePullSecrets: [
+    ]
 
 ## @section Common parameters
 
@@ -15,12 +16,14 @@ headless: true
 allowTags: true
 
 ## @param extraDeploy Extra objects to deploy with the release (rendered as templates)
-extraDeploy: []
+extraDeploy: [
+  ]
 
 ## @section helm test
 test:
   ## @param test.toolServers Tool server Services helm test must find unreachable (skipped while absent)
-  toolServers: []
+  toolServers: [
+    ]
   ## @param test.ingressService The ingress controller's Service in the platform.egress.ingressFrom namespace, which helm test calls the release through
   ingressService: ingress-nginx-controller
   image:
@@ -40,11 +43,11 @@ platform:
   controller:
     image:
       ## @param platform.controller.image.registry Controller image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.controller.image.repository Controller image repository
       repository: aisolate/controller
       ## @param platform.controller.image.tag Controller image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.0"
+      tag: "0.1.5-7fd944a071"
       ## @param platform.controller.image.digest Controller image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.controller.image.pullPolicy Controller image pull policy
@@ -52,16 +55,17 @@ platform:
     ## @param platform.controller.replicas Controller replicas (leader-elected)
     replicas: 1
     ## @param platform.controller.resources [object] Controller container resources (requests, limits), e.g. for a namespace ResourceQuota
-    resources: {}
-
+    resources: {
+      }
+  
   airlock:
     image:
       ## @param platform.airlock.image.registry Airlock image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.airlock.image.repository Airlock image repository: the core of every airlock pod the controller renders
       repository: aisolate/airlock
       ## @param platform.airlock.image.tag Airlock image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.0"
+      tag: "0.1.5-7fd944a071"
       ## @param platform.airlock.image.digest Airlock image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.airlock.image.pullPolicy Pull policy of every pod the controller renders, airlock and tool server alike
@@ -74,54 +78,72 @@ platform:
     corsAllowedOrigins: ""
     ## @param platform.airlock.resources [object] Requests and limits of every airlock and discovery pod (cpu, memory, ephemeral-storage: the fetched code lands in /tmp, at most 2Gi): one airlock's code or load must not starve its node
     resources:
-      requests: {cpu: 250m, memory: 768Mi, ephemeral-storage: 256Mi}
-      limits: {cpu: "2", memory: 1536Mi, ephemeral-storage: 4Gi}
-
+      requests: {
+        cpu: 250m,
+        memory: 768Mi,
+        ephemeral-storage: 256Mi
+      }
+      limits: {
+        cpu: "2",
+        memory: 1536Mi,
+        ephemeral-storage: 4Gi
+      }
+  
   toolServer:
     image:
       ## @param platform.toolServer.image.registry Tool server image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.toolServer.image.repository Tool server image repository: one pod per airlock, rendered by the controller
       repository: aisolate/tool-server
       ## @param platform.toolServer.image.tag Tool server image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.0"
+      tag: "0.1.5-7fd944a071"
       ## @param platform.toolServer.image.digest Tool server image digest (sha256:…), optional; wins over the tag
       digest: ""
     ## @param platform.toolServer.resources [object] Requests and limits of every MCP server (cpu, memory, ephemeral-storage, which holds the fetched code in /tmp, at most 2Gi)
     resources:
-      requests: {cpu: 100m, memory: 512Mi, ephemeral-storage: 128Mi}
-      limits: {cpu: "1", memory: 1Gi, ephemeral-storage: 4Gi}
-
+      requests: {
+        cpu: 100m,
+        memory: 512Mi,
+        ephemeral-storage: 128Mi
+      }
+      limits: {
+        cpu: "1",
+        memory: 1Gi,
+        ephemeral-storage: 4Gi
+      }
+  
   ## The Python runtimes: the airlock and tool server pods of an airlock whose code is Python
   ## (spec.jar.language: python), with the Java pods' pull policy, replicas and resources.
   airlockPython:
     image:
       ## @param platform.airlockPython.image.registry Python airlock image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.airlockPython.image.repository Python airlock image repository: the airlock pod of an airlock with Python code
       repository: aisolate/airlock-python
       ## @param platform.airlockPython.image.tag Python airlock image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.0"
+      tag: "0.1.5-7fd944a071"
       ## @param platform.airlockPython.image.digest Python airlock image digest (sha256:…), optional; wins over the tag
       digest: ""
-
+  
   toolServerPython:
     image:
       ## @param platform.toolServerPython.image.registry Python tool server image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.toolServerPython.image.repository Python tool server image repository: the MCP server of an airlock with Python code
       repository: aisolate/tool-server-python
       ## @param platform.toolServerPython.image.tag Python tool server image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.0"
+      tag: "0.1.5-7fd944a071"
       ## @param platform.toolServerPython.image.digest Python tool server image digest (sha256:…), optional; wins over the tag
       digest: ""
-
+  
   scheduling:
     ## @param platform.scheduling.nodeSelector [object] Node labels every pod of the release must match: the chart's Deployments, the helm test and the pods the controller renders alike, e.g. {pool: aisolate} for a dedicated node pool
-    nodeSelector: {}
+    nodeSelector: {
+      }
     ## @param platform.scheduling.tolerations [array] Tolerations of every pod of the release, likewise: a dedicated pool's taint, e.g. [{key: pool, operator: Equal, value: aisolate, effect: NoSchedule}]
-    tolerations: []
-
+    tolerations: [
+      ]
+  
   ingress:
     ## @param platform.ingress.className IngressClass of every Ingress, the chart's and the controller's
     className: nginx
@@ -132,8 +154,9 @@ platform:
     ## @param platform.ingress.tls Serve every chart Ingress over TLS from the Secret named after it (aisolate-tls, ui-tls, backend-tls, chat-tls, keycloak-tls), from the installer or cert-manager
     tls: false
     ## @param platform.ingress.annotations [object] Annotations of every chart Ingress, over the chart's nginx ones, e.g. cert-manager.io/cluster-issuer
-    annotations: {}
-
+    annotations: {
+      }
+  
   identity:
     ## @param platform.identity.issuerUri The application users' identity provider: the issuer the pods validate tokens against, and the backend unless operators.issuerUri is set; empty: the chart's Keycloak users realm, else required
     issuerUri: ""
@@ -142,7 +165,8 @@ platform:
     ## @param platform.identity.rolesClaim Dot path of the roles claim in the tokens: the UI roles and the roles the rules name (Entra ID app roles: roles; Okta: groups); the pods read it, the backend unless operators.rolesClaim is set
     rolesClaim: realm_access.roles
     ## @param platform.identity.egress [object] The provider as a NetworkPolicy peer, in the cluster or at a private address: namespaceSelector and podSelector, or cidr (/8 or longer), plus port (required); empty: Keycloak's, else public HTTPS
-    egress: {}
+    egress: {
+      }
     operators:
       ## @param platform.identity.operators.issuerUri AIsolate's own identity provider for the dashboard and the CLI; empty: the operators realm of the chart's Keycloak (platform.keycloak.enabled), else the one above
       issuerUri: ""
@@ -151,7 +175,8 @@ platform:
       ## @param platform.identity.operators.rolesClaim Dot path of the roles claim in that provider's tokens; empty: the one above
       rolesClaim: ""
       ## @param platform.identity.operators.egress [object] That provider as a NetworkPolicy peer (same keys as platform.identity.egress); empty: the one above
-      egress: {}
+      egress: {
+        }
   egress:
     ## @param platform.egress.dns [object] The cluster DNS as a peer (default: kube-dns in kube-system, port 53): namespaceSelector, podSelector, cidr (/8 or longer, never with selectors), port (required)
     dns:
@@ -168,12 +193,19 @@ platform:
       ## @param platform.egress.apiServer.cidr The Kubernetes API server's address, the controller's and the backend's way to it, e.g. the kubernetes Endpoints' IP/32; empty: any address on the ports (the notes warn; leave empty on Cilium)
       cidr: ""
       ## @param platform.egress.apiServer.ports [array] The API server's ports as the pods' traffic reaches it after the Service: 443 on most managed clusters, 6443 on kubeadm, k3s and OpenShift, 8443 on minikube
-      ports: [443, 6443, 8443]
+      ports: [
+        443,
+        6443,
+        8443
+      ]
+      
     ## @param platform.egress.hosts [object] The hosts of every LLM and data source, each with its NetworkPolicy peer (cidr /8 or longer, or namespaceSelector and podSelector, plus port): an airlock resolving an unmapped host is Invalid, a global entry with one is left out of every catalog; a host on platform.egress.proxy.domains needs no entry
-    hosts: {}
+    hosts: {
+      }
     proxy:
       ## @param platform.egress.proxy.domains Hostnames the CONNECT-only egress proxy may reach on port 443: exact names, *.example.com for its subdomains, .example.com for the name and its subdomains; the proxy renders when non-empty
-      domains: []
+      domains: [
+        ]
       image:
         ## @param platform.egress.proxy.image.registry Egress proxy (Envoy) image registry
         registry: ""
@@ -187,29 +219,37 @@ platform:
         pullPolicy: IfNotPresent
       ## @param platform.egress.proxy.resources [object] Egress proxy container resources (requests, limits)
       resources:
-        requests: {cpu: 50m, memory: 64Mi}
-        limits: {cpu: 500m, memory: 256Mi}
-
+        requests: {
+          cpu: 50m,
+          memory: 64Mi
+        }
+        limits: {
+          cpu: 500m,
+          memory: 256Mi
+        }
+  
   observability:
     ## @param platform.observability.otlpEndpoint OTLP/HTTP base URL the pods send traces to, e.g. http://otel-collector.monitoring.svc:4318 (/v1/traces is appended); its host must be in platform.egress.hosts or proxied, or every space is Invalid; empty: no traces
     otlpEndpoint: ""
-
+  
   # The AIsolate UI's Monitoring (headless=false): the backend reads each trace from the trace store's query API in
   # the cluster for its trace page; the browser never calls the store.
   tracing:
     ## @param platform.tracing.queryUrl The trace store's query API the backend reads, Jaeger's (http://jaeger.monitoring.svc:16686) or any store that answers GET /api/traces/{id} as Jaeger does; empty: the AIsolate UI has no Monitoring
     queryUrl: ""
     ## @param platform.tracing.egress [object] The trace store as the backend's NetworkPolicy peer, required with queryUrl: namespaceSelector and podSelector, or cidr, plus its query port
-    egress: {}
-
+    egress: {
+      }
+  
   # Monitoring's Metrics tab (headless=false): the backend asks the Prometheus that scrapes the pods a fixed set of
   # queries, scoped to the caller's spaces by the series' space label; the browser never calls it.
   metrics:
     ## @param platform.metrics.queryUrl The Prometheus HTTP API the backend reads, e.g. http://prometheus.monitoring.svc:9090 (or any store answering /api/v1/query and /query_range); its series need the space label; empty: no Metrics tab
     queryUrl: ""
     ## @param platform.metrics.egress [object] Prometheus as the backend's NetworkPolicy peer, required with queryUrl: namespaceSelector and podSelector, or cidr, plus its port
-    egress: {}
-
+    egress: {
+      }
+  
   # The audit trail is the platform's: each airlock pod hands its lines to the backend (headless=false), which keeps
   # them append-only and hash-chained per airlock. Headless has no backend: the pods print the lines to stdout alone.
   audit:
@@ -221,11 +261,11 @@ platform:
     retentionMonths: 84
     ## @param platform.audit.existingSecret An existing Secret with the audit ingest key under the key key: no audit-ingest Secret and no checksum then; set it for a render without a cluster (Argo CD, helm template); empty: generated and kept
     existingSecret: ""
-
+  
   credentials:
     ## @param platform.credentials.existingSecret An existing Secret with the key the backend seals credentials with (32+ characters) under the key key: no credentials-key Secret or checksum then; for a render without a cluster; empty: generated
     existingSecret: ""
-
+  
   frontend:
     ## @param platform.frontend.host AIsolate UI host (headless=false)
     host: ui.aisolate.example.com
@@ -241,8 +281,9 @@ platform:
       ## @param platform.frontend.image.pullPolicy AIsolate UI image pull policy
       pullPolicy: IfNotPresent
     ## @param platform.frontend.resources [object] AIsolate UI container resources (requests, limits)
-    resources: {}
-
+    resources: {
+      }
+  
   chat:
     ## @param platform.chat.enabled Install the AIsolate chat, the sample client, on its own host, with or without the AIsolate UI
     enabled: false
@@ -262,10 +303,12 @@ platform:
     ## @param platform.chat.replicas Chat replicas
     replicas: 1
     ## @param platform.chat.resources [object] Chat container resources (requests, limits)
-    resources: {}
+    resources: {
+      }
     ## @param platform.chat.hostAliases [array] Host entries of the chat pod (ip, hostnames), for a release host and identity provider the cluster's DNS does not resolve, as in the minikube demo
-    hostAliases: []
-
+    hostAliases: [
+      ]
+  
   keycloak:
     ## @param platform.keycloak.enabled Install the chart's own Keycloak, a demo identity provider with the two realms AIsolate needs; platform.identity and platform.identity.operators then default to them (production names its own)
     enabled: false
@@ -273,11 +316,11 @@ platform:
     host: keycloak.aisolate.example.com
     image:
       ## @param platform.keycloak.image.registry Keycloak image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.keycloak.image.repository Keycloak image repository: AIsolate's build of the stock Keycloak with its login themes; it imports the chart's two realms at its first start
       repository: aisolate/keycloak
       ## @param platform.keycloak.image.tag Keycloak image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.0"
+      tag: "0.1.5-7fd944a071"
       ## @param platform.keycloak.image.digest Keycloak image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.keycloak.image.pullPolicy Keycloak image pull policy
@@ -298,29 +341,31 @@ platform:
     ## @param platform.keycloak.existingSecret A Secret with the admin password under admin-password (the demo admin's too) and, with demoUsers, developer-, auditor-, jane- and john-password; empty: generated as the Secret keycloak and kept (set one for a render without a cluster)
     existingSecret: ""
     ## @param platform.keycloak.resources [object] Keycloak container resources (requests, limits)
-    resources: {}
+    resources: {
+      }
     persistence:
       ## @param platform.keycloak.persistence.size The size of the PersistentVolumeClaim keycloak its file database keeps the realms, users and registered clients on; the realms are imported into an empty one only: delete it to import them again
       size: 1Gi
       ## @param platform.keycloak.persistence.storageClass Its StorageClass; empty: the cluster's default
       storageClass: ""
-
+  
   backend:
     ## @param platform.backend.host Backend host (headless=false): the AIsolate UI's API and the CLI's endpoint
     host: api.aisolate.example.com
     image:
       ## @param platform.backend.image.registry Backend image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.backend.image.repository Backend image repository
       repository: aisolate/backend
       ## @param platform.backend.image.tag Backend image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.0"
+      tag: "0.1.5-7fd944a071"
       ## @param platform.backend.image.digest Backend image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.backend.image.pullPolicy Backend image pull policy
       pullPolicy: IfNotPresent
     ## @param platform.backend.resources [object] Backend container resources (requests, limits)
-    resources: {}
+    resources: {
+      }
     ## @param platform.backend.maxArtifactSize Largest project artifact (a jar or a Python zip) a deploy may bring, as Spring reads a size (500MB, 2GB); empty: no limit. The pods fetch it from the backend at start
     maxArtifactSize: ""
 
@@ -339,7 +384,8 @@ persistence:
       ## @param persistence.postgres.image.pullPolicy The backend's PostgreSQL image pull policy
       pullPolicy: IfNotPresent
     ## @param persistence.postgres.resources [object] The backend's PostgreSQL container resources (requests, limits)
-    resources: {}
+    resources: {
+      }
     ## @param persistence.postgres.existingSecret A Secret with the database password under the key password; empty: the chart generates the Secret db and keeps it, which a render without a cluster (Argo CD, helm template) cannot: set one there
     existingSecret: ""
     storage:
