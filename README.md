@@ -42,12 +42,12 @@ through the ingress controller and that its discovery pods, and the Services in 
 
 `chart/examples/example-values.yaml` is a production starting point; [chart/README.md](chart/README.md) lists every parameter.
 
-- **Images.** A published chart pulls every AIsolate image from `docker-public.sonatype.reportix.com`, pinned by digest to its
-  appVersion. The UI's and the chat's have no default registry, since they carry their deployment's URLs from their build: build
-  each, then set its registry and its digest. The airlock and the tool server come twice, Java and Python (`platform.airlock`,
-  `platform.toolServer`, `platform.airlockPython`, `platform.toolServerPython`): the controller runs an airlock on the pair of its
-  code's language. `allowTags: true` is only for a cluster that builds its own images; without it a tag-only image fails the
-  render. For a private registry, `global.imageRegistry` reaches every image, the controller's pods
+- **Images.** A published chart pulls every AIsolate image from `docker-public.sonatype.reportix.com`, pinned by tag to its
+  appVersion; set `digest` on an image to pin it harder (a digest wins over the tag). The UI's and the chat's have no default
+  registry, since they carry their deployment's URLs from their build: build each, then set its registry and its tag. The
+  airlock and the tool server come twice, Java and Python (`platform.airlock`, `platform.toolServer`,
+  `platform.airlockPython`, `platform.toolServerPython`): the controller runs an airlock on the pair of its code's language.
+  `allowTags: false` makes every AIsolate image need its digest. For a private registry, `global.imageRegistry` reaches every image, the controller's pods
   included, and `global.imagePullSecrets` the chart's own pods; the airlock and tool server pods run as the namespace's `default`
   ServiceAccount, so give it the Secret:
   `kubectl patch serviceaccount default -n aisolate -p '{"imagePullSecrets":[{"name":"<secret>"}]}'`.
@@ -82,15 +82,19 @@ with the app's snapshot images from the internal registry: `AISOLATE_IMAGE_TAG`,
 
 ## Releasing
 
-1. Tag the release in the app repository (`aisolate/aisolate`); its pipeline publishes the images to
-   `docker-public.sonatype.reportix.com`. It needs a tag made after the app repository's docs and release-CI
-   changes (`crds/` at its root, images on docker-public): the script cannot pin an older one.
-2. Run `scripts/pin-release.sh <appVersion>` (`--dry-run` first): it writes every AIsolate image's digest,
-   `appVersion` and the CRDs of that tag, and writes nothing while an image is missing; an unpublished UI or chat
-   image only warns and keeps its empty digest. Then run `tests/chart/regenerate.sh`: the parameter table shows the
-   digests.
-3. Open the merge request; like every one, it bumps `version` in `chart/Chart.yaml`.
-4. Once it is merged, tag `main` with the chart's `version`, bare semver without a `v`: CI checks the pins
-   (`scripts/pin-release.sh --check`) and publishes the chart to the public Helm repository.
+The chart follows the fleet's deploy/release flow (the `release@1` component of `reportix/ci-templates`):
 
-Contributions: [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
+- **Every merge to `aisolate/aisolate` `main`** publishes its images to `docker-internal` as `<version>-<sha10>` and its
+  `release-deploy` job writes those tags into `chart/values.yaml` on this repository's bot branch `next`, merged to `main`
+  by an auto-merged merge request. `main` therefore always installs the app's newest merge. Never edit the seven image
+  pins by hand.
+- **A release:**
+  1. Tag the release in the app repository (`aisolate/aisolate`), bare semver; its pipeline publishes the images to
+     `docker-public.sonatype.reportix.com`.
+  2. Play `chart-prepare-release` on `main`'s newest pipeline with `CHART_RELEASE_VERSION` (strictly above `main`'s
+     `version`): it rewrites the image pins to `docker-public…:<version>`, checks every one exists, bumps `version` and
+     opens the merge request `release/<version>`.
+  3. On that branch run `scripts/sync-app.sh <appVersion>` (`--dry-run` first): it writes `appVersion` and the CRDs of
+     the app's tag. Then `tests/chart/regenerate.sh`, and push.
+  4. Merge, then tag `main` with the chart's `version`: CI refuses a tag whose values still name an image the public
+     channel lacks (`chart_image_gate`) and publishes the chart to the public Helm repository.

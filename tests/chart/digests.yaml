@@ -1,18 +1,24 @@
-# The AIsolate digests every test render starts from: values.yaml carries them only once a release is pinned, and
-# these keep the goldens the same across releases. The scenario files in values/ add what they need on top.
+# The AIsolate image pins every test render starts from: registry and digest together, so the goldens never move when
+# the deploy bot (docker-internal, <version>-<sha10> tags) or a release promote (docker-public, <version>) rewrites
+# chart/values.yaml; a digest wins over whatever tag they set. The scenario files in values/ add what they need on top.
 platform:
   controller:
     image:
+      registry: docker-public.sonatype.reportix.com
       digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   airlock:
     image:
+      registry: docker-public.sonatype.reportix.com
       digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   toolServer:
     image:
+      registry: docker-public.sonatype.reportix.com
       digest: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
   airlockPython:
     image:
+      registry: docker-public.sonatype.reportix.com
       digest: sha256:9999999999999999999999999999999999999999999999999999999999999999
   toolServerPython:
     image:
+      registry: docker-public.sonatype.reportix.com
       digest: sha256:8888888888888888888888888888888888888888888888888888888888888888

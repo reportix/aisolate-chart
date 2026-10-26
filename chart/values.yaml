@@ -11,8 +11,8 @@ global:
 ## @param headless Without the AIsolate UI: the CRDs, the controller, default-deny, the aisolate Service and its routes, the egress proxy; false adds the UI (frontend, backend, its database). A bool, never a string
 headless: true
 
-## @param allowTags Let tag-only images render, for clusters that build their own images; off, every AIsolate image needs its digest
-allowTags: false
+## @param allowTags Let tag-only images render; the published chart pins every AIsolate image by tag, so this is on. Off, every AIsolate image needs its digest
+allowTags: true
 
 ## @param extraDeploy Extra objects to deploy with the release (rendered as templates)
 extraDeploy: []
@@ -39,13 +39,13 @@ test:
 platform:
   controller:
     image:
-      ## @param platform.controller.image.registry Controller image registry; the default is the public one, whose image the chart pins by digest
+      ## @param platform.controller.image.registry Controller image registry; the default is the public one, whose image the chart pins by tag
       registry: docker-public.sonatype.reportix.com
       ## @param platform.controller.image.repository Controller image repository
       repository: aisolate/controller
       ## @param platform.controller.image.tag Controller image tag, used only with allowTags; empty: the chart's appVersion
       tag: ""
-      ## @param platform.controller.image.digest Controller image digest (sha256:…); required unless allowTags
+      ## @param platform.controller.image.digest Controller image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.controller.image.pullPolicy Controller image pull policy
       pullPolicy: IfNotPresent
@@ -56,13 +56,13 @@ platform:
 
   airlock:
     image:
-      ## @param platform.airlock.image.registry Airlock image registry; the default is the public one, whose image the chart pins by digest
+      ## @param platform.airlock.image.registry Airlock image registry; the default is the public one, whose image the chart pins by tag
       registry: docker-public.sonatype.reportix.com
       ## @param platform.airlock.image.repository Airlock image repository: the core of every airlock pod the controller renders
       repository: aisolate/airlock
       ## @param platform.airlock.image.tag Airlock image tag, used only with allowTags; empty: the chart's appVersion
       tag: ""
-      ## @param platform.airlock.image.digest Airlock image digest (sha256:…); required unless allowTags
+      ## @param platform.airlock.image.digest Airlock image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.airlock.image.pullPolicy Pull policy of every pod the controller renders, airlock and tool server alike
       pullPolicy: IfNotPresent
@@ -79,13 +79,13 @@ platform:
 
   toolServer:
     image:
-      ## @param platform.toolServer.image.registry Tool server image registry; the default is the public one, whose image the chart pins by digest
+      ## @param platform.toolServer.image.registry Tool server image registry; the default is the public one, whose image the chart pins by tag
       registry: docker-public.sonatype.reportix.com
       ## @param platform.toolServer.image.repository Tool server image repository: one pod per airlock, rendered by the controller
       repository: aisolate/tool-server
       ## @param platform.toolServer.image.tag Tool server image tag, used only with allowTags; empty: the chart's appVersion
       tag: ""
-      ## @param platform.toolServer.image.digest Tool server image digest (sha256:…); required unless allowTags
+      ## @param platform.toolServer.image.digest Tool server image digest (sha256:…), optional; wins over the tag
       digest: ""
     ## @param platform.toolServer.resources [object] Requests and limits of every MCP server (cpu, memory, ephemeral-storage, which holds the fetched code in /tmp, at most 2Gi)
     resources:
@@ -96,24 +96,24 @@ platform:
   ## (spec.jar.language: python), with the Java pods' pull policy, replicas and resources.
   airlockPython:
     image:
-      ## @param platform.airlockPython.image.registry Python airlock image registry; the default is the public one, whose image the chart pins by digest
+      ## @param platform.airlockPython.image.registry Python airlock image registry; the default is the public one, whose image the chart pins by tag
       registry: docker-public.sonatype.reportix.com
       ## @param platform.airlockPython.image.repository Python airlock image repository: the airlock pod of an airlock with Python code
       repository: aisolate/airlock-python
       ## @param platform.airlockPython.image.tag Python airlock image tag, used only with allowTags; empty: the chart's appVersion
       tag: ""
-      ## @param platform.airlockPython.image.digest Python airlock image digest (sha256:…); required unless allowTags
+      ## @param platform.airlockPython.image.digest Python airlock image digest (sha256:…), optional; wins over the tag
       digest: ""
 
   toolServerPython:
     image:
-      ## @param platform.toolServerPython.image.registry Python tool server image registry; the default is the public one, whose image the chart pins by digest
+      ## @param platform.toolServerPython.image.registry Python tool server image registry; the default is the public one, whose image the chart pins by tag
       registry: docker-public.sonatype.reportix.com
       ## @param platform.toolServerPython.image.repository Python tool server image repository: the MCP server of an airlock with Python code
       repository: aisolate/tool-server-python
       ## @param platform.toolServerPython.image.tag Python tool server image tag, used only with allowTags; empty: the chart's appVersion
       tag: ""
-      ## @param platform.toolServerPython.image.digest Python tool server image digest (sha256:…); required unless allowTags
+      ## @param platform.toolServerPython.image.digest Python tool server image digest (sha256:…), optional; wins over the tag
       digest: ""
 
   scheduling:
@@ -236,7 +236,7 @@ platform:
       repository: aisolate/ui
       ## @param platform.frontend.image.tag AIsolate UI image tag, used only with allowTags; empty: the chart's appVersion
       tag: ""
-      ## @param platform.frontend.image.digest AIsolate UI image digest (sha256:…); required unless allowTags
+      ## @param platform.frontend.image.digest AIsolate UI image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.frontend.image.pullPolicy AIsolate UI image pull policy
       pullPolicy: IfNotPresent
@@ -255,7 +255,7 @@ platform:
       repository: aisolate/chat
       ## @param platform.chat.image.tag Chat image tag, used only with allowTags; empty: the chart's appVersion
       tag: ""
-      ## @param platform.chat.image.digest Chat image digest (sha256:…); required unless allowTags
+      ## @param platform.chat.image.digest Chat image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.chat.image.pullPolicy Chat image pull policy
       pullPolicy: IfNotPresent
@@ -309,13 +309,13 @@ platform:
     ## @param platform.backend.host Backend host (headless=false): the AIsolate UI's API and the CLI's endpoint
     host: api.aisolate.example.com
     image:
-      ## @param platform.backend.image.registry Backend image registry; the default is the public one, whose image the chart pins by digest
+      ## @param platform.backend.image.registry Backend image registry; the default is the public one, whose image the chart pins by tag
       registry: docker-public.sonatype.reportix.com
       ## @param platform.backend.image.repository Backend image repository
       repository: aisolate/backend
       ## @param platform.backend.image.tag Backend image tag, used only with allowTags; empty: the chart's appVersion
       tag: ""
-      ## @param platform.backend.image.digest Backend image digest (sha256:…); required unless allowTags
+      ## @param platform.backend.image.digest Backend image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.backend.image.pullPolicy Backend image pull policy
       pullPolicy: IfNotPresent
