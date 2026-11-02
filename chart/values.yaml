@@ -43,11 +43,11 @@ platform:
   controller:
     image:
       ## @param platform.controller.image.registry Controller image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.controller.image.repository Controller image repository
       repository: aisolate/controller
       ## @param platform.controller.image.tag Controller image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.5"
+      tag: "0.1.6-2dd8856c8d"
       ## @param platform.controller.image.digest Controller image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.controller.image.pullPolicy Controller image pull policy
@@ -61,11 +61,11 @@ platform:
   airlock:
     image:
       ## @param platform.airlock.image.registry Airlock image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.airlock.image.repository Airlock image repository: the core of every airlock pod the controller renders
       repository: aisolate/airlock
       ## @param platform.airlock.image.tag Airlock image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.5"
+      tag: "0.1.6-2dd8856c8d"
       ## @param platform.airlock.image.digest Airlock image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.airlock.image.pullPolicy Pull policy of every pod the controller renders, airlock and tool server alike
@@ -92,11 +92,11 @@ platform:
   toolServer:
     image:
       ## @param platform.toolServer.image.registry Tool server image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.toolServer.image.repository Tool server image repository: one pod per airlock, rendered by the controller
       repository: aisolate/tool-server
       ## @param platform.toolServer.image.tag Tool server image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.5"
+      tag: "0.1.6-2dd8856c8d"
       ## @param platform.toolServer.image.digest Tool server image digest (sha256:…), optional; wins over the tag
       digest: ""
     ## @param platform.toolServer.resources [object] Requests and limits of every MCP server (cpu, memory, ephemeral-storage, which holds the fetched code in /tmp, at most 2Gi)
@@ -117,22 +117,22 @@ platform:
   airlockPython:
     image:
       ## @param platform.airlockPython.image.registry Python airlock image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.airlockPython.image.repository Python airlock image repository: the airlock pod of an airlock with Python code
       repository: aisolate/airlock-python
       ## @param platform.airlockPython.image.tag Python airlock image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.5"
+      tag: "0.1.6-2dd8856c8d"
       ## @param platform.airlockPython.image.digest Python airlock image digest (sha256:…), optional; wins over the tag
       digest: ""
   
   toolServerPython:
     image:
       ## @param platform.toolServerPython.image.registry Python tool server image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.toolServerPython.image.repository Python tool server image repository: the MCP server of an airlock with Python code
       repository: aisolate/tool-server-python
       ## @param platform.toolServerPython.image.tag Python tool server image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.5"
+      tag: "0.1.6-2dd8856c8d"
       ## @param platform.toolServerPython.image.digest Python tool server image digest (sha256:…), optional; wins over the tag
       digest: ""
   
@@ -199,6 +199,7 @@ platform:
         8443
       ]
       
+    
     
     ## @param platform.egress.hosts [object] The hosts of every LLM and data source, each with its NetworkPolicy peer (cidr /8 or longer, or namespaceSelector and podSelector, plus port): an airlock resolving an unmapped host is Invalid, a global entry with one is left out of every catalog; a host on platform.egress.proxy.domains needs no entry
     hosts: {
@@ -317,11 +318,11 @@ platform:
     host: keycloak.aisolate.example.com
     image:
       ## @param platform.keycloak.image.registry Keycloak image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.keycloak.image.repository Keycloak image repository: AIsolate's build of the stock Keycloak with its login themes; it imports the chart's two realms at its first start
       repository: aisolate/keycloak
       ## @param platform.keycloak.image.tag Keycloak image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.5"
+      tag: "0.1.6-2dd8856c8d"
       ## @param platform.keycloak.image.digest Keycloak image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.keycloak.image.pullPolicy Keycloak image pull policy
@@ -355,11 +356,11 @@ platform:
     host: api.aisolate.example.com
     image:
       ## @param platform.backend.image.registry Backend image registry; the default is the public one, whose image the chart pins by tag
-      registry: docker-public.sonatype.reportix.com
+      registry: docker-internal.sonatype.reportix.com
       ## @param platform.backend.image.repository Backend image repository
       repository: aisolate/backend
       ## @param platform.backend.image.tag Backend image tag: the deploy flow keeps it at the app's newest main (docker-internal, <version>-<sha10>) and a release promotes it to the release's version
-      tag: "0.1.5"
+      tag: "0.1.6-2dd8856c8d"
       ## @param platform.backend.image.digest Backend image digest (sha256:…), optional; wins over the tag
       digest: ""
       ## @param platform.backend.image.pullPolicy Backend image pull policy
