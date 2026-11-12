@@ -1,7 +1,7 @@
 # AIsolate Helm Chart
 
 AIsolate serves governed model endpoints over the organisation's own databases. This chart installs the custom resource
-definitions (`Space` and `Airlock` of `aisolate.dev/v1`), the controller that turns them into airlock pods and tool server pods,
+definitions (`Global`, `Space`, `Airlock` and `AirlockVersion` of `aisolate.dev/v1`), the controller that turns them into airlock pods and tool server pods,
 and the namespace's policies. How to install it and which values to set: the
 [repository README](https://github.com/reportix/aisolate-chart#readme).
 
@@ -38,8 +38,8 @@ is rendered without cluster access (Argo CD, `helm template`) it cannot keep a g
 rolling the pods after a rotation is then yours.
 
 Each airlock pod hands its audit lines to the backend's ingest port 8085 (`POST /v1/audit/events`), and each airlock and tool
-server pod fetches its code from it at start (`GET /v1/code/<space>/<airlock>/<digest>`), each with a token the controller
-renders for that airlock alone. Only those pods reach the port and no Ingress routes to it. The backend keeps the lines
+server pod fetches its code from it at start (`GET /v1/code/<space>/<airlock>/<version>/<digest>`), each with a token the
+controller renders for that airlock version alone. Only those pods reach the port and no Ingress routes to it. The backend keeps the lines
 append-only and hash-chained per airlock. A headless install has no backend: the pods print the lines to stdout alone, nothing
 fails closed, and an airlock runs without code only. The API host's Ingress takes a body of any size, so
 `platform.backend.maxArtifactSize` (for example `500MB`) is the limit. What a line holds and how the chain is checked: AIsolate's
@@ -70,8 +70,8 @@ What the spans and the series hold, and never hold: AIsolate's
 
 ## Uninstallation
 
-`helm uninstall aisolate --namespace aisolate` keeps the CRDs, and with them every `Space` and `Airlock`; `kubectl delete -f
-chart/crds` removes those as well.
+`helm uninstall aisolate --namespace aisolate` keeps the CRDs (`Global`, `Space`, `Airlock`, `AirlockVersion`), and with them
+every `Space`, `Airlock` and `AirlockVersion`; `kubectl delete -f chart/crds` removes those as well.
 
 ## Parameters
 

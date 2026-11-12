@@ -111,7 +111,7 @@ settings_identity() { settings | yq -N -o json -I0 '.aisolate.controller.identit
 [ "$(echo "$full" | settings_identity | jq -r '.issuerUri + " " + .jwkSetUri + " " + .egress.podSelector["[app]"] + " " + (.egress.port | tostring)')" = "https://keycloak.example.com/realms/acme http://keycloak.aisolate.svc:8080/realms/acme/protocol/openid-connect/certs keycloak 8080" ] \
   || fail "the pods do not take the users realm of the chart's Keycloak, its in-cluster keys and its peer: $(echo "$full" | settings_identity)"
 
-echo "Roles: the backend writes no ConfigMap and no pod, creates and deletes the airlocks' Secrets and never reads them, applies the three kinds; the controller watches the three kinds and writes their status, and nothing of an airlock is versioned"
+echo "Roles: the backend writes no ConfigMap and no pod, creates and deletes the airlocks' Secrets and never reads them, applies the four kinds; the controller watches the four kinds and writes their status"
 role='select(.kind == "Role" and .metadata.name == "backend-apply") | .rules[]'
 echo "$full" | yq -N "$role | select(.resources[] == \"configmaps\") | .verbs[]" | grep . && fail "the backend may write ConfigMaps: the code no longer travels as one"
 echo "$full" | yq -N "$role | select(.resources[] == \"pods\") | .verbs[]" | grep -x list >/dev/null || fail "the backend cannot list pods to wait for them"
@@ -120,8 +120,8 @@ secret_verbs=$(echo "$full" | yq -N "$role | select(.resources | any_c(test(\"^(
 [ "$secret_verbs" = "create delete " ] || fail "the backend's Secret verbs are '$secret_verbs', expected create and delete only: get, list, watch, patch and update return the data"
 [ "$(echo "$full" | yq -N "$role | select(.resources[] == \"globals\") | .verbs[]" | sort | tr '\n' ' ')" = "create delete get list patch update " ] || fail "the backend cannot apply the Global"
 controller_verbs() { echo "$prod" | yq -N "select(.kind == \"Role\" and .metadata.name == \"aisolate-controller\") | .rules[] | select(.resources[] == \"$1\") | .verbs[]" | sort | tr '\n' ' '; }
-echo "$prod" | yq -N 'select(.kind == "Role") | .rules[].resources[]' | grep -q airlockversions && fail "a Role still names airlockversions"
-for kind in globals spaces airlocks; do
+[ "$(echo "$full" | yq -N "$role | select(.resources[] == \"airlockversions\") | .verbs[]" | sort | tr '\n' ' ')" = "create delete get list patch update " ] || fail "the backend cannot apply the AirlockVersions"
+for kind in globals spaces airlocks airlockversions; do
   [ "$(controller_verbs $kind)" = "get list watch " ] || fail "the controller cannot get, list and watch $kind"
   [ "$(controller_verbs $kind/status)" = "get patch update " ] || fail "the controller cannot write the $kind' status"
 done

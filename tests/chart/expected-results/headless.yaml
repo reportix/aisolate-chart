@@ -62,10 +62,10 @@ metadata:
   namespace: aisolate
 rules:
   - apiGroups: ["aisolate.dev"]
-    resources: ["globals", "spaces", "airlocks"]
+    resources: ["globals", "spaces", "airlocks", "airlockversions"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["aisolate.dev"]
-    resources: ["globals/status", "spaces/status", "airlocks/status"]
+    resources: ["globals/status", "spaces/status", "airlocks/status", "airlockversions/status"]
     verbs: ["get", "update", "patch"]
   - apiGroups: ["apps"]
     resources: ["deployments"]

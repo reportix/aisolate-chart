@@ -12,10 +12,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
 rules:
   - apiGroups: ["aisolate.dev"]
-    resources: ["globals", "spaces", "airlocks"]
+    resources: ["globals", "spaces", "airlocks", "airlockversions"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["aisolate.dev"]
-    resources: ["globals/status", "spaces/status", "airlocks/status"]
+    resources: ["globals/status", "spaces/status", "airlocks/status", "airlockversions/status"]
     verbs: ["get", "update", "patch"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
@@ -23,7 +23,7 @@ rules:
   - apiGroups: [""]
     resources: ["services", "configmaps"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
-  # Each airlock's audit ingest token, mounted into its airlock pod alone, and its code token, mounted into both pods. No new reach: a Deployment the
+  # Each version's audit ingest token, mounted into its airlock pod alone, and its code token, mounted into both pods. No new reach: a Deployment the
   # controller renders could already mount any Secret of the namespace.
   - apiGroups: [""]
     resources: ["secrets"]
