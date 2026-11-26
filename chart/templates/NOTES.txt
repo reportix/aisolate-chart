@@ -13,7 +13,7 @@ Chat            {{ include "aisolate.scheme" . }}://{{ .Values.platform.chat.hos
 {{- if .Values.platform.keycloak.enabled }}
 Keycloak        {{ include "aisolate.scheme" . }}://{{ .Values.platform.keycloak.host }}   realms {{ .Values.platform.keycloak.realms.operators.name }} (operators) and {{ .Values.platform.keycloak.realms.users.name }} (users); admin's password: kubectl get secret {{ .Values.platform.keycloak.existingSecret | default "keycloak" }} -n {{ .Release.Namespace }} -o jsonpath='{.data.admin-password}' | base64 -d
 {{- end }}
-Status: kubectl get spaces,airlocks -n {{ .Release.Namespace }}
+Status: kubectl get spaces,airlocks,airlockversions -n {{ .Release.Namespace }}
 {{- if not .Values.platform.egress.apiServer.cidr }}
 
 WARNING: platform.egress.apiServer.cidr is empty: the controller and the backend may reach any address on
