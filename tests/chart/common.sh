@@ -23,6 +23,7 @@ generate_docs() {
 }
 
 # One golden per scenario of tests/chart/values/, each rendered on top of digests.yaml.
+# A newer yq keeps helm's leading document separator, an older one drops it: the goldens start without it.
 render() {
   local dir=$1 values
   rm -rf "$dir" && mkdir -p "$dir"
@@ -36,6 +37,6 @@ render() {
           | (select(.spec.template.metadata.annotations["checksum/credentials-key"] != null) | .spec.template.metadata.annotations["checksum/credentials-key"]) = "generated"
           | (select(.spec.template.metadata.annotations["checksum/audit-ingest-key"] != null) | .spec.template.metadata.annotations["checksum/audit-ingest-key"]) = "generated"
           | (select(.spec.template.metadata.annotations["checksum/db-password"] != null) | .spec.template.metadata.annotations["checksum/db-password"]) = "generated"' \
-      > "$dir/$(basename "$values")"
+      | sed '1{/^---$/d;}' > "$dir/$(basename "$values")"
   done
 }
