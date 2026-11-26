@@ -15,10 +15,6 @@
       {
         "name": "aisolate-auditor",
         "description": "AIsolate UI: reads the audit trail and nothing else"
-      },
-      {
-        "name": "offline_access",
-        "description": "Offline tokens: the CLI's login outlives the browser session"
       }
     ]
   },
